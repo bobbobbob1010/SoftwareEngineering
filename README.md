@@ -12,7 +12,7 @@
 
 ### 📦 계층별 역할 및 구성 파일
 
-| 계층 (패키지) | 역할 | 구성 파일 예시 |
+| 계층 (패키지) | 역할 | 설명 | 구성 파일 예시 |
 | :--- | :--- | :--- |
 | **controller** | **Presentation Layer** (프레젠테이션 계층) | HTTP 요청을 받아 DTO를 Service로 전달하고 응답을 반환합니다. (UI(frontend)와 통신) | `AuthController.java`, `OrderController.java` |
 | **service** | **Service Layer** (서비스 계층) | 핵심 비즈니스 로직(회원가입, 주문 등)을 구현합니다. | `AuthenticationService.java`, `OrderService.java` |
