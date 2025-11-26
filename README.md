@@ -25,18 +25,18 @@
 
 도메인 객체들은 기능별로 하위 패키지에 분류되어 관리됩니다.
 
-* `domain/user`
+* `domain/user` <-- 사용자 관련 패키지 
     * `User.java`
     * `Customer.java`
     * `Staff.java`
     * `KitchenStaff.java`
     * `DeliveryStaff.java`
-* `domain/order` (💡 **새로운 하위 패키지**)
+* `domain/order` <-- 주문 관련 패키지
     * `Order.java`
     * `OrderItem.java`
     * `Cart.java`
     * `Payment.java`
     * `OrderStatus.java`
-* `domain/inventory` (💡 **새로운 하위 패키지**)
+* `domain/inventory` <-- 재고,메뉴 관련 패키지
     * `Inventory.java`
     * `MenuItem.java`
