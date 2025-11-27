@@ -1,0 +1,233 @@
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import '../../App.css';
+
+function StaffInventoryScreen() {
+  const navigate = useNavigate();
+  const [inventory, setInventory] = useState([
+    { id: 1, name: 'Beef', quantity: 25, unit: 'kg', min: 10, status: 'good' },
+    { id: 2, name: 'Chicken', quantity: 15, unit: 'kg', min: 10, status: 'good' },
+    { id: 3, name: 'Fish', quantity: 8, unit: 'kg', min: 10, status: 'low' },
+    { id: 4, name: 'Salmon', quantity: 5, unit: 'kg', min: 8, status: 'critical' },
+    { id: 5, name: 'Vegetables', quantity: 30, unit: 'kg', min: 15, status: 'good' },
+    { id: 6, name: 'Champagne', quantity: 12, unit: 'bottles', min: 10, status: 'good' },
+    { id: 7, name: 'Wine', quantity: 8, unit: 'bottles', min: 10, status: 'low' },
+    { id: 8, name: 'Caviar', quantity: 2, unit: 'kg', min: 1, status: 'good' }
+  ]);
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'good':
+        return '#4CAF50';
+      case 'low':
+        return '#FF9800';
+      case 'critical':
+        return '#FF6B6B';
+      default:
+        return '#9E9E9E';
+    }
+  };
+
+  const getStatusText = (status) => {
+    switch (status) {
+      case 'good':
+        return '✓ Good';
+      case 'low':
+        return '⚠ Low';
+      case 'critical':
+        return '🚨 Critical';
+      default:
+        return status;
+    }
+  };
+
+  const handleUpdateQuantity = (id, newQuantity) => {
+    setInventory(inventory.map(item =>
+      item.id === id ? { ...item, quantity: newQuantity } : item
+    ));
+  };
+
+  return (
+    <div style={{
+      backgroundColor: '#1a1a1a',
+      minHeight: '100vh',
+      padding: '20px',
+      overflow: 'auto'
+    }}>
+      <div style={{ maxWidth: '500px', margin: '0 auto' }}>
+        {/* 뒤로 가기 */}
+        <button
+          onClick={() => navigate('/staff-home')}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: '#b0b0b0',
+            fontSize: '20px',
+            cursor: 'pointer',
+            marginBottom: '20px'
+          }}
+        >
+          ← Back
+        </button>
+
+        <h1 style={{
+          fontSize: '28px',
+          fontWeight: 'bold',
+          color: '#FFFFFF',
+          marginBottom: '30px'
+        }}>
+          Inventory Management
+        </h1>
+
+        {/* 통계 */}
+        <div style={{
+          display: 'flex',
+          gap: '10px',
+          marginBottom: '20px'
+        }}>
+          <div style={{
+            flex: 1,
+            backgroundColor: '#2a2a2a',
+            borderRadius: '15px',
+            padding: '15px',
+            textAlign: 'center'
+          }}>
+            <p style={{ fontSize: '14px', color: '#b0b0b0', marginBottom: '5px' }}>
+              Total Items
+            </p>
+            <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#FFC107' }}>
+              {inventory.length}
+            </p>
+          </div>
+
+          <div style={{
+            flex: 1,
+            backgroundColor: '#2a2a2a',
+            borderRadius: '15px',
+            padding: '15px',
+            textAlign: 'center'
+          }}>
+            <p style={{ fontSize: '14px', color: '#b0b0b0', marginBottom: '5px' }}>
+              Low Stock
+            </p>
+            <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#FF9800' }}>
+              {inventory.filter(item => item.status !== 'good').length}
+            </p>
+          </div>
+        </div>
+
+        {/* 재고 목록 */}
+        {inventory.map((item) => (
+          <div
+            key={item.id}
+            style={{
+              backgroundColor: '#2a2a2a',
+              borderRadius: '15px',
+              padding: '20px',
+              marginBottom: '15px'
+            }}
+          >
+            {/* 상품명과 상태 */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '10px'
+            }}>
+              <p style={{
+                fontSize: '16px',
+                fontWeight: 'bold',
+                color: '#FFFFFF'
+              }}>
+                {item.name}
+              </p>
+              <div style={{
+                backgroundColor: getStatusColor(item.status),
+                borderRadius: '6px',
+                padding: '4px 8px',
+                fontSize: '11px',
+                fontWeight: 'bold',
+                color: item.status === 'good' ? '#FFFFFF' : '#000000'
+              }}>
+                {getStatusText(item.status)}
+              </div>
+            </div>
+
+            {/* 현재 수량과 최소 수량 */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              marginBottom: '15px',
+              paddingBottom: '15px',
+              borderBottom: '1px solid #3a3a3a'
+            }}>
+              <div>
+                <p style={{ fontSize: '12px', color: '#b0b0b0', marginBottom: '3px' }}>
+                  Current
+                </p>
+                <p style={{
+                  fontSize: '18px',
+                  fontWeight: 'bold',
+                  color: '#FFFFFF'
+                }}>
+                  {item.quantity} {item.unit}
+                </p>
+              </div>
+              <div>
+                <p style={{ fontSize: '12px', color: '#b0b0b0', marginBottom: '3px' }}>
+                  Minimum
+                </p>
+                <p style={{
+                  fontSize: '18px',
+                  fontWeight: 'bold',
+                  color: '#b0b0b0'
+                }}>
+                  {item.min} {item.unit}
+                </p>
+              </div>
+            </div>
+
+            {/* 수량 조정 버튼 */}
+            <div style={{
+              display: 'flex',
+              gap: '10px'
+            }}>
+              <button
+                onClick={() => handleUpdateQuantity(item.id, Math.max(0, item.quantity - 1))}
+                style={{
+                  flex: 1,
+                  backgroundColor: '#FF6B6B',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '8px',
+                  color: '#FFFFFF',
+                  fontWeight: 'bold',
+                  cursor: 'pointer'
+                }}
+              >
+                − Used
+              </button>
+              <button
+                onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
+                style={{
+                  flex: 1,
+                  backgroundColor: '#4CAF50',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '8px',
+                  color: '#FFFFFF',
+                  fontWeight: 'bold',
+                  cursor: 'pointer'
+                }}
+              >
+                + Restocked
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export default StaffInventoryScreen;
