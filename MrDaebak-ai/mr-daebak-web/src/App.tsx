@@ -1,135 +1,173 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 import './App.css';
 
-// 서버에서 오는 데이터의 모양(타입)을 정의
-interface OrderData {
-  menu: string;
-  quantity: number;
-  modifications: string[];
+// 타입 정의
+interface ChatMessage {
+  sender: 'user' | 'ai';
+  text: string;
 }
 
-interface OrderResponse {
-  status: string;
-  text: string;
-  data: OrderData;
+interface AiResponse {
+  response: string;
+  current_order: string;
+  is_finished: boolean;
 }
 
 function App() {
-  const [isRecording, setIsRecording] = useState<boolean>(false);
-  const [status, setStatus] = useState<string>("대기 중...");
-  const [orderResult, setOrderResult] = useState<OrderResponse | null>(null);
-  
-  // 녹음 관련 도구들 (타입 정의)
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    { sender: 'ai', text: "안녕하세요, OOO 고객님, 어떤 디너를 주문하시겠습니까?" }
+  ]);
+  const [isRecording, setIsRecording] = useState(false);
+  const [status, setStatus] = useState("대기 중...");
+  const [sessionId, setSessionId] = useState("");
+  const [orderSummary, setOrderSummary] = useState("아직 주문 없음");
+
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  const chatEndRef = useRef<HTMLDivElement>(null);
 
-  // 1. 녹음 시작
+  // 컴포넌트 시작 시 세션 ID 생성
+  useEffect(() => {
+    setSessionId(Math.random().toString(36).substring(7));
+  }, []);
+
+  // 채팅 스크롤 자동 이동
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  // 녹음 시작
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaRecorderRef.current = new MediaRecorder(stream);
       
-      mediaRecorderRef.current.ondataavailable = (event: BlobEvent) => {
-        if (event.data.size > 0) {
-          audioChunksRef.current.push(event.data);
-        }
+      mediaRecorderRef.current.ondataavailable = (event) => {
+        if (event.data.size > 0) audioChunksRef.current.push(event.data);
       };
 
       mediaRecorderRef.current.onstop = sendAudioToServer;
-
       mediaRecorderRef.current.start();
       setIsRecording(true);
-      setStatus("녹음 중... 말씀하세요! 🎤");
-      setOrderResult(null); 
+      setStatus("듣고 있어요... 👂");
     } catch (err) {
-      console.error("마이크 권한 오류:", err);
-      alert("마이크 사용 권한을 허용해주세요!");
+      alert("마이크 권한이 필요합니다.");
     }
   };
 
-  // 2. 녹음 종료
+  // 녹음 종료
   const stopRecording = () => {
-    if (mediaRecorderRef.current) {
-      mediaRecorderRef.current.stop();
-    }
+    mediaRecorderRef.current?.stop();
     setIsRecording(false);
-    setStatus("분석 중... 잠시만 기다려주세요 ⏳");
+    setStatus("생각하는 중... 🤔");
   };
 
-  // 3. 서버로 전송
+  // 서버 전송
   const sendAudioToServer = async () => {
     const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
-    audioChunksRef.current = []; // 초기화
+    audioChunksRef.current = [];
 
     const formData = new FormData();
-    formData.append('file', audioBlob, 'voice_order.wav');
+    formData.append('file', audioBlob, 'voice.wav');
+    formData.append('session_id', sessionId); // 대화 기억용 ID
 
     try {
-      // 파이썬 서버 주소 (포트 5000)
-      const response = await axios.post<OrderResponse>('http://localhost:5000/order', formData, {
+      const res = await axios.post('http://localhost:5000/chat', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
 
-      console.log("서버 응답:", response.data);
-      setOrderResult(response.data); 
-      setStatus("주문 분석 완료! ✅");
+      const data = res.data;
+      
+      // 1. 내 말 표시
+      setMessages(prev => [...prev, { sender: 'user', text: data.user_text }]);
+      
+      // 2. AI 말 표시
+      const aiRes: AiResponse = data.ai_response;
+      setMessages(prev => [...prev, { sender: 'ai', text: aiRes.response }]);
+      
+      // 3. 현재 주문 상태 업데이트
+      setOrderSummary(aiRes.current_order);
+      
+      setStatus("대기 중...");
+      
+      if (aiRes.is_finished) {
+        alert("주문이 완료되었습니다! 감사합니다.");
+      }
+
     } catch (error) {
-      console.error("에러 발생:", error);
-      setStatus("서버 연결 실패 ❌ (파이썬 서버 켜져 있나요?)");
+      console.error(error);
+      setStatus("오류 발생 ❌");
     }
   };
 
   return (
-    <div style={{ padding: '40px', textAlign: 'center', fontFamily: 'sans-serif' }}>
-      <h1>🍽️ 미스터 대박 AI 주문 (Demo)</h1>
-      
-      <div style={{ margin: '30px' }}>
-        <button 
-          onClick={isRecording ? stopRecording : startRecording}
-          style={{
-            padding: '20px 40px',
-            fontSize: '24px',
-            borderRadius: '50px',
-            border: 'none',
-            cursor: 'pointer',
-            backgroundColor: isRecording ? '#ff4757' : '#2ed573',
-            color: 'white',
-            fontWeight: 'bold',
-            boxShadow: '0 4px 15px rgba(0,0,0,0.2)'
-          }}
-        >
-          {isRecording ? "⏹️ 녹음 끝내기" : "🎙️ 주문 말하기"}
-        </button>
+    <div style={{ maxWidth: '600px', margin: '0 auto', padding: '20px', fontFamily: 'sans-serif' }}>
+      <header style={{ textAlign: 'center', marginBottom: '20px' }}>
+        <h1>🍽️ 미스터 대박 AI 웨이터</h1>
+        <div style={{ fontSize: '14px', color: '#666', background: '#f0f0f0', padding: '10px', borderRadius: '10px' }}>
+          🛒 <strong>현재 주문 상태:</strong> {orderSummary}
+        </div>
+      </header>
+
+      {/* 채팅창 영역 */}
+      <div style={{ 
+        height: '400px', 
+        overflowY: 'auto', 
+        border: '1px solid #ddd', 
+        borderRadius: '15px', 
+        padding: '20px',
+        backgroundColor: '#fff',
+        boxShadow: 'inset 0 0 10px rgba(0,0,0,0.05)'
+      }}>
+        {messages.map((msg, idx) => (
+          <div key={idx} style={{ 
+            textAlign: msg.sender === 'user' ? 'right' : 'left', 
+            marginBottom: '15px' 
+          }}>
+            <div style={{ 
+              display: 'inline-block', 
+              padding: '10px 15px', 
+              borderRadius: '20px', 
+              background: msg.sender === 'user' ? '#007AFF' : '#E5E5EA',
+              color: msg.sender === 'user' ? '#fff' : '#000',
+              maxWidth: '80%',
+              lineHeight: '1.5'
+            }}>
+              {msg.text}
+            </div>
+          </div>
+        ))}
+        <div ref={chatEndRef} />
       </div>
 
-      <p style={{ fontSize: '18px', color: '#555' }}>{status}</p>
-
-      {/* 분석 결과 표시 */}
-      {orderResult && (
-        <div style={{ 
-          marginTop: '30px', 
-          border: '2px solid #ddd', 
-          borderRadius: '15px', 
-          padding: '20px',
-          display: 'inline-block',
-          textAlign: 'left',
-          backgroundColor: '#f9f9f9',
-          maxWidth: '500px',
-          color: '#333'
-        }}>
-          <h3>🧾 주문서 (AI 분석 결과)</h3>
-          <p><strong>🗣️ 인식된 문장:</strong> {orderResult.text}</p>
-          <hr />
-          <p><strong>🍽️ 메뉴:</strong> {orderResult.data.menu}</p>
-          <p><strong>🔢 수량:</strong> {orderResult.data.quantity}개</p>
-          <p><strong>✍️ 변경사항:</strong> 
-            {orderResult.data.modifications && orderResult.data.modifications.length > 0 
-              ? orderResult.data.modifications.join(', ') 
-              : " 없음"}
-          </p>
-        </div>
-      )}
+      {/* 컨트롤 영역 */}
+      <div style={{ marginTop: '20px', textAlign: 'center' }}>
+        <p style={{ color: '#888', marginBottom: '10px' }}>{status}</p>
+        <button 
+          onMouseDown={startRecording}
+          onMouseUp={stopRecording}
+          onTouchStart={startRecording}
+          onTouchEnd={stopRecording}
+          style={{
+            width: '80px',
+            height: '80px',
+            borderRadius: '50%',
+            border: 'none',
+            backgroundColor: isRecording ? '#ff3b30' : '#34c759',
+            color: 'white',
+            fontSize: '30px',
+            cursor: 'pointer',
+            boxShadow: '0 4px 10px rgba(0,0,0,0.3)',
+            transition: 'transform 0.1s'
+          }}
+        >
+          {isRecording ? '⏹️' : '🎙️'}
+        </button>
+        <p style={{ marginTop: '10px', fontSize: '12px', color: '#aaa' }}>
+          버튼을 <strong>누르고 있는 동안</strong> 말씀하세요!
+        </p>
+      </div>
     </div>
   );
 }
