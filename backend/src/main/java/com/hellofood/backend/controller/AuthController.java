@@ -1,6 +1,7 @@
 package com.hellofood.backend.controller;
 
 import com.hellofood.backend.domain.user.Customer;
+import com.hellofood.backend.domain.user.Staff;
 import com.hellofood.backend.service.AuthenticationService;
 import com.hellofood.backend.dto.user.UserRegisterRequest;
 import com.hellofood.backend.dto.user.LoginRequest;
@@ -42,10 +43,23 @@ public class AuthController {
 
     // 로그인 엔드포인트
     @PostMapping("/login")
-    public ResponseEntity<String> loginUsers(@RequestBody LoginRequest request) {
+    public ResponseEntity<?> loginUsers(@RequestBody LoginRequest request) {
         try {
-            authenticationService.authenticateCustomer(request.getEmail(), request.getPassword());
-            return ResponseEntity.ok("로그인 성공!");
+            Customer customer = authenticationService.authenticateCustomer(request.getEmail(), request.getPassword());
+            
+            return ResponseEntity.ok(customer);
+
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("인증 실패:" + e.getMessage());
+        }
+    }
+
+    @PostMapping("/staff-login")
+    public ResponseEntity<?> loginStaffs(@RequestBody LoginRequest request) {
+        try {
+            Staff staff = authenticationService.authenticateStaff(request.getEmail(), request.getPassword());
+            
+            return ResponseEntity.ok(staff);
 
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("인증 실패:" + e.getMessage());

@@ -2,7 +2,9 @@ package com.hellofood.backend.service;
 // 이 클래스는 AuthenticationService 인터페이스를 구현
 
 import com.hellofood.backend.domain.user.Customer;
+import com.hellofood.backend.domain.user.Staff;
 import com.hellofood.backend.repository.CustomerRepository;
+import com.hellofood.backend.repository.StaffRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,7 +21,26 @@ import org.springframework.security.crypto.password.PasswordEncoder; // 비밀�
 public class AuthenticationServiceImpl implements AuthenticationService {
     
     private final CustomerRepository customerRepository;
+    private final StaffRepository staffRepository;
     private final PasswordEncoder passwordEncoder;
+
+
+    // @Override
+    // @Transactional
+    // public Long registerStaff(Staff staff) {
+    //     //이메일 중복 확인
+    //     if (customerRepository.existsByEmail(staff.getEmail())) {
+    //         throw new IllegalArgumentException("Email already in use");
+    //     }
+
+    //     //비밀번호 암호화
+    //     String encodedPassword = passwordEncoder.encode(staff.getPassword());
+    //     staff.setPassword(encodedPassword);
+
+    //     //새로운 직원 저장
+    //     Customer savedStaff = customerRepository.save(staff);
+    //     return savedStaff.getId();
+    // }
 
     @Override
     @Transactional
@@ -50,5 +71,18 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         }
 
         return customer;
+    }
+
+    @Override
+    public Staff authenticateStaff(String email, String password) {
+        //이메일로 직원 조회
+        Staff staff = staffRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid email or password"));
+        
+        //비밀번호 검증
+        if (!passwordEncoder.matches(password, staff.getPassword())) {
+            throw new IllegalArgumentException("Invalid email2 or password");
+        }
+        return staff;
     }
 }

@@ -158,7 +158,7 @@ function ProfileScreen() {
               Member Since
             </p>
             <p style={{ fontSize: '13px', fontWeight: 'bold', color: '#FFFFFF' }}>
-              {currentUser && new Date(currentUser.registeredAt).getFullYear()}
+              {currentUser && new Date(currentUser.registeredAt).toLocaleDateString()}
             </p>
           </div>
         </div>
@@ -205,7 +205,7 @@ function ProfileScreen() {
                   Phone Number
                 </p>
                 <p style={{ fontSize: '16px', fontWeight: 'bold', color: '#FFFFFF' }}>
-                  {currentUser?.phone}
+                  {currentUser?.phoneNumber}
                 </p>
               </div>
 

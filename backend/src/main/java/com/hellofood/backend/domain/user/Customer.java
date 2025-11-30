@@ -26,6 +26,18 @@ public class Customer extends User { // 추상클래스 User 상속
     @Column(length = 255)
     private String address;
 
+    @Column(nullable = false)
+    private String registeredAt;
+
+    @Column(nullable = false)
+    private Integer totalOrders = 0;
+
+    @Column(nullable = false)
+    private Integer totalSpent = 0;
+
+    @Column(nullable = false)
+    private Integer discountRate = 0;
+
     // myCart :Cart 객체와 1:1 관계
     @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     // customers 테이블에 "cart_id" 라는 외래키 컬럼을 생성해 Cart 테이블과 연결
@@ -40,8 +52,12 @@ public class Customer extends User { // 추상클래스 User 상속
 
     //전체 필드를 초기화하는 생성자
     public Customer(String name, String email, String password, String address, String phoneNumber, String registeredAt, Integer totalOrders, Integer totalSpent, Integer discountRate) {
-        super(name, email, password, phoneNumber, registeredAt, totalOrders, totalSpent, discountRate);
+        super(name, email, password, phoneNumber);
         this.address = address;
+        this.registeredAt = registeredAt;
+        this.totalOrders = totalOrders;
+        this.totalSpent = totalSpent;
+        this.discountRate = discountRate;
     }
 
 

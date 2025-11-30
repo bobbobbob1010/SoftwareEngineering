@@ -18,6 +18,9 @@ function CustomerHomeScreen() {
     const customers = JSON.parse(localStorage.getItem('customers') || '[]');
     const user = JSON.parse(localStorage.getItem('currentUser'));
     
+    // 현재 localStorage에 저장된 정보 불러오기 추가한거
+    setCurrentUser(user);
+
     if (user && customers.length > 0) {
       // customers 배열에서 현재 고객 찾기
       const updatedUser = customers.find(c => c.id === user.id);
@@ -252,7 +255,7 @@ function CustomerHomeScreen() {
             {currentUser?.address}
           </p>
           <p style={{ fontSize: '12px', color: '#b0b0b0' }}>
-            📞 {currentUser?.phone}
+            📞 {currentUser?.phoneNumber}
           </p>
         </div>
 

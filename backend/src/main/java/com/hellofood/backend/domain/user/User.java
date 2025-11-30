@@ -1,7 +1,8 @@
 package com.hellofood.backend.domain.user;
 
 import java.beans.ConstructorProperties;
-import java.util.Date;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import jakarta.persistence.*; //JPA 패키지 호출
 import lombok.Getter;
@@ -17,15 +18,12 @@ import lombok.Setter;
 @Setter //setPassword 등 자동 생성
 public abstract class User {
     //User 생성자
-    protected User(String name, String email, String password, String phoneNumber, String registeredAt, Integer totalOrders, Integer totalSpent, Integer discountRate) {
+    protected User(String name, String email, String password, String phoneNumber) {
         this.name = name;
         this.email = email;
         this.password = password;
         this.phoneNumber = phoneNumber;
-        this.registeredAt = registeredAt;
-        this.totalOrders = totalOrders;
-        this.totalSpent = totalSpent;
-        this.discountRate = discountRate;
+        
     }
     // Primary Key.
     @Id
@@ -38,23 +36,14 @@ public abstract class User {
     @Column(nullable = false, unique = true, length = 100)
     private String email;
     
+    @JsonIgnore
     @Column(nullable = false, length = 255)
     private String password;
 
     @Column(nullable = false, length = 15) //한 명이 고객과 직원둘다 될수 있으니까 nullable = false
     private String phoneNumber;
 
-    @Column(nullable = false)
-    private String registeredAt;
 
-    @Column(nullable = false)
-    private Integer totalOrders = 0;
-
-    @Column(nullable = false)
-    private Integer totalSpent = 0;
-
-    @Column(nullable = false)
-    private Integer discountRate = 0;
 
     // JPA 관리를 위해 insertable/updatable을 false로 설정할 수 있음
     // 데모데이터 삽입을 위한 코드

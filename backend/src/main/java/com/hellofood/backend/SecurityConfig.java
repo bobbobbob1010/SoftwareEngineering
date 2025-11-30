@@ -21,7 +21,7 @@ public class SecurityConfig {
     // 1. PasswordEncoder 빈 등록 (Service에서 사용)
     @Bean
     public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder(); 
+        return new BCryptPasswordEncoder();
     }
 
     // 2. Spring Security 필터 체인 설정
