@@ -1,19 +1,44 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../../App.css';
+import { useEffect } from 'react';
+import axios from 'axios';
 
 function StaffInventoryScreen() {
   const navigate = useNavigate();
-  const [inventory, setInventory] = useState([
-    { id: 1, name: 'Beef', quantity: 25, unit: 'kg', min: 10, status: 'good' },
-    { id: 2, name: 'Chicken', quantity: 15, unit: 'kg', min: 10, status: 'good' },
-    { id: 3, name: 'Fish', quantity: 8, unit: 'kg', min: 10, status: 'low' },
-    { id: 4, name: 'Salmon', quantity: 5, unit: 'kg', min: 8, status: 'critical' },
-    { id: 5, name: 'Vegetables', quantity: 30, unit: 'kg', min: 15, status: 'good' },
-    { id: 6, name: 'Champagne', quantity: 12, unit: 'bottles', min: 10, status: 'good' },
-    { id: 7, name: 'Wine', quantity: 8, unit: 'bottles', min: 10, status: 'low' },
-    { id: 8, name: 'Caviar', quantity: 2, unit: 'kg', min: 1, status: 'good' }
-  ]);
+  // const [inventory, setInventory] = useState([
+  //   { id: 1, name: 'Beef', quantity: 25, unit: 'kg', min: 10, status: 'good' },
+  //   { id: 2, name: 'Chicken', quantity: 15, unit: 'kg', min: 10, status: 'good' },
+  //   { id: 3, name: 'Fish', quantity: 8, unit: 'kg', min: 10, status: 'low' },
+  //   { id: 4, name: 'Salmon', quantity: 5, unit: 'kg', min: 8, status: 'critical' },
+  //   { id: 5, name: 'Vegetables', quantity: 30, unit: 'kg', min: 15, status: 'good' },
+  //   { id: 6, name: 'Champagne', quantity: 12, unit: 'bottles', min: 10, status: 'good' },
+  //   { id: 7, name: 'Wine', quantity: 8, unit: 'bottles', min: 10, status: 'low' },
+  //   { id: 8, name: 'Caviar', quantity: 2, unit: 'kg', min: 1, status: 'good' }
+  // ]);
+
+  const [inventory, setInventory] = useState([]);
+
+  useEffect(() => {
+    axios.get('http://localhost:8080/api/inventories')
+      .then(response => {
+        // 백엔드 데이터를 프론트엔드 변수명으로 변환 (Mapping)
+        const formattedData = response.data.map(item => ({
+          id: item.stockID,           // 백엔드 stockID -> 프론트 id
+          name: item.itemName,        // 백엔드 itemName -> 프론트 name
+          quantity: item.quantityAvailable, // 백엔드 quantityAvailable -> 프론트 quantity
+          unit: item.unit,
+          min: item.minQuantity,      // 백엔드 minQuantity -> 프론트 min
+          status: item.status.toLowerCase() // 대문자(Good) -> 소문자(good)
+        }));
+        
+        // 변환된 데이터로 상태 업데이트
+        setInventory(formattedData);
+      })
+      .catch(error => {
+        console.error("재고 불러오기 실패:", error);
+      });
+  }, []);
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -41,10 +66,40 @@ function StaffInventoryScreen() {
     }
   };
 
-  const handleUpdateQuantity = (id, newQuantity) => {
-    setInventory(inventory.map(item =>
-      item.id === id ? { ...item, quantity: newQuantity } : item
-    ));
+  // ==========================================
+  // [수정] 수량 변경 및 DB 업데이트 로직
+  // ==========================================
+  const handleUpdateQuantity = async (id, newQuantity) => {
+    // 1. 음수 방지 (0보다 작아질 수 없음)
+    if (newQuantity < 0) return;
+
+    try {
+      // 2. 백엔드에 PATCH 요청 보내기 (DB 업데이트)
+      // Controller가 받는 형태: { "quantity": 50 }
+      await axios.patch(`http://localhost:8080/api/inventories/${id}/quantity`, {
+        quantity: newQuantity
+      });
+
+      // 3. 요청이 성공하면 프론트엔드 화면(State)도 업데이트
+      // (이때, 수량이 바뀌면 status도 변할 수 있으므로 간단한 상태 계산 로직을 추가하면 더 좋습니다)
+      setInventory(prevInventory => 
+        prevInventory.map(item => {
+          if (item.id === id) {
+            // 수량이 바뀌었으니 상태(Good/Low/Critical)도 프론트에서 미리 계산해서 보여줌 (UX 향상)
+            let newStatus = 'good';
+            if (newQuantity <= 0) newStatus = 'critical';
+            else if (newQuantity <= item.min) newStatus = 'low';
+
+            return { ...item, quantity: newQuantity, status: newStatus };
+          }
+          return item;
+        })
+      );
+
+    } catch (error) {
+      console.error("수량 업데이트 실패:", error);
+      alert("수량 변경을 저장하지 못했습니다.");
+    }
   };
 
   return (

@@ -1,9 +1,11 @@
 package com.hellofood.backend.config; // 설정 파일 패키지 (예시)
 
+import com.hellofood.backend.domain.inventory.Inventory;
 import com.hellofood.backend.domain.order.MenuItem;
 import com.hellofood.backend.domain.user.Customer;
 import com.hellofood.backend.domain.user.KitchenStaff;
 import com.hellofood.backend.repository.CustomerRepository;
+import com.hellofood.backend.repository.InventoryRepository;
 import com.hellofood.backend.domain.user.Staff;
 import com.hellofood.backend.repository.StaffRepository;
 import com.hellofood.backend.repository.MenuItemRepository;
@@ -25,6 +27,7 @@ public class DataInitializer implements ApplicationRunner {
     private final CustomerRepository customerRepository;
     private final StaffRepository staffRepository;
     private final MenuItemRepository menuItemRepository;
+    private final InventoryRepository inventoryRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Override
@@ -152,5 +155,35 @@ public class DataInitializer implements ApplicationRunner {
             
             System.out.println("✅ Demo Menu Items created.");
         }
+
+        if (inventoryRepository.count() == 0) {
+            System.out.println("📦 재고 데이터 초기화 시작...");
+
+            // 생성자 순서: (itemName, quantityAvailable, minQuantity, unit, status)
+            // 주의: 프론트엔드 데이터의 'min'은 생성자의 3번째 인자인 'minQuantity'로 들어갑니다.
+            
+            inventoryRepository.saveAll(List.of(
+                // id: 1
+                new Inventory("Beef", 25, 10, "kg", "good"),
+                // id: 2
+                new Inventory("Chicken", 15, 10, "kg", "good"),
+                // id: 3
+                new Inventory("Fish", 8, 10, "kg", "low"),
+                // id: 4
+                new Inventory("Salmon", 5, 8, "kg", "critical"),
+                // id: 5
+                new Inventory("Vegetables", 30, 15, "kg", "good"),
+                // id: 6
+                new Inventory("Champagne", 12, 10, "bottles", "good"),
+                // id: 7
+                new Inventory("Wine", 8, 10, "bottles", "low"),
+                // id: 8
+                new Inventory("Caviar", 2, 1, "kg", "good")
+            ));
+
+            System.out.println("✅ Inventory data initialized.");
+        }
     }
+
+    
 }

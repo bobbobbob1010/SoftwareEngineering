@@ -10,7 +10,7 @@ import lombok.Setter;
 @Setter
 public class Inventory {
     
-    @Id // ★ 이 어노테이션이 누락되어서 에러가 발생했습니다.
+    @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long stockID;
 
