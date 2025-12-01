@@ -1,68 +1,60 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import '../../App.css';
 import axios from 'axios';
+import '../../App.css';
 
 function MenuDetailsScreen() {
   const navigate = useNavigate();
   const { dinnerType } = useParams();
   
+  // ============================================
   // 상태 관리
+  // ============================================
   const [quantity, setQuantity] = useState(1);
   const [style, setStyle] = useState('grand');
   const [discountRate, setDiscountRate] = useState(0);
   const [currentUser, setCurrentUser] = useState(null);
-  const [customerTier, setCustomerTier] = useState(null);
-  
-  // [변경 1] "바로 주문"을 위해 기본 구성품 아이템들의 ID가 필요함
-  const [defaultItems, setDefaultItems] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
+  // ============================================
+  // 컴포넌트 로드 시 고객 정보 & 할인율 로드
+  // ============================================
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem('currentUser'));
-    setCurrentUser(user);
+    if (user) {
+      setCurrentUser(user);
+      
+      // 할인율 계산 (Backend에서 받으면 좋음)
+      // 임시로 localStorage에서 주문 수 조회
+      const allOrders = JSON.parse(localStorage.getItem('orders') || '[]');
+      const userOrders = allOrders.filter(order => order.customerId === user.id);
+      
+      const tier = calculateTier(userOrders.length);
+      setDiscountRate(tier.discountRate);
+    }
+  }, []);
 
-    const loadCustomerTierData = async () => {
-    try {
-    // 고객 등급 정보 불러오기
-    const customerTierRes = await axios.get(`http://localhost:8080/api/customers/${user.id}`);
-    const customerTierData = customerTierRes.data;
-    setCustomerTier({
-        name: customerTierData.tierName,       // 예: "GOLD"
-        discountRate: customerTierData.discountRate, // 예: 15
-        icon: customerTierData.tierIcon        // 예: "🥇"
-      });
-    setDiscountRate(customerTierData.discountRate);
-    } catch (error) {
-      console.error("Failed to load customer data", error);
+  // ============================================
+  // 할인율 계산 (로컬)
+  // ============================================
+  const calculateTier = (orderCount) => {
+    if (orderCount >= 20) {
+      return { name: 'Platinum', discountRate: 20, icon: '💎' };
+    } else if (orderCount >= 15) {
+      return { name: 'Gold', discountRate: 15, icon: '🥇' };
+    } else if (orderCount >= 10) {
+      return { name: 'Silver', discountRate: 10, icon: '🥈' };
+    } else if (orderCount >= 5) {
+      return { name: 'Bronze', discountRate: 5, icon: '🥉' };
+    } else {
+      return { name: 'Regular', discountRate: 0, icon: '👤' };
     }
   };
-  loadCustomerTierData();
 
-    // [변경 2] 백엔드에서 해당 디너의 "기본 구성품" ID 목록 가져오기
-    const fetchDefaultItems = async () => {
-      try {
-        const response = await axios.get(`http://localhost:8080/api/menu-items`, {
-            params: { type: dinnerType, isBaseItem: true }
-        });
-        setDefaultItems(response.data);
-      } catch (error) {
-        console.error("Failed to load default items", error);
-      }
-      
-    };
-    fetchDefaultItems();
-
-  }, [dinnerType]);
-
-  // const calculateTier = (orderCount) => {
-  //   if (orderCount >= 20) return { name: 'Platinum', discountRate: 20, icon: '💎' };
-  //   else if (orderCount >= 15) return { name: 'Gold', discountRate: 15, icon: '🥇' };
-  //   else if (orderCount >= 10) return { name: 'Silver', discountRate: 10, icon: '🥈' };
-  //   else if (orderCount >= 5) return { name: 'Bronze', discountRate: 5, icon: '🥉' };
-  //   else return { name: 'Regular', discountRate: 0, icon: '👤' };
-  // };
-
-  // [UI용 데이터] 아이콘, 설명, 스타일별 가격 등은 DB에 없으므로 프론트에서 관리
+  // ============================================
+  // 메뉴 데이터
+  // ============================================
   const dinnerDetails = {
     'valentine': {
       name: 'Valentine Dinner',
@@ -70,8 +62,17 @@ function MenuDetailsScreen() {
       basePrice: 79.99,
       description: 'Romantic candlelit dinner for two',
       servings: '2 people',
-      items: ['🍷 Wine', '🥩 Steak', '💕 Heart-shaped decorated plate', '🧻 Napkin'],
-      priceByStyle: { simple: 79.99, grand: 99.99, deluxe: 129.99 }
+      items: [
+        '🍷 Wine',
+        '🥩 Steak',
+        '💕 Heart-shaped decorated plate',
+        '🧻 Napkin'
+      ],
+      priceByStyle: {
+        simple: 79.99,
+        grand: 99.99,
+        deluxe: 129.99
+      }
     },
     'french': {
       name: 'French Dinner',
@@ -79,8 +80,17 @@ function MenuDetailsScreen() {
       basePrice: 69.99,
       description: 'Classic French cuisine',
       servings: 'Per person',
-      items: ['☕ Coffee', '🍷 Wine', '🥗 Salad', '🥩 Steak'],
-      priceByStyle: { simple: 69.99, grand: 89.99, deluxe: 119.99 }
+      items: [
+        '☕ Coffee',
+        '🍷 Wine',
+        '🥗 Salad',
+        '🥩 Steak'
+      ],
+      priceByStyle: {
+        simple: 69.99,
+        grand: 89.99,
+        deluxe: 119.99
+      }
     },
     'english': {
       name: 'English Dinner',
@@ -88,8 +98,17 @@ function MenuDetailsScreen() {
       basePrice: 59.99,
       description: 'Traditional English feast',
       servings: 'Per person',
-      items: ['🍳 Scrambled Egg', '🥓 Bacon', '🍞 Bread', '🥩 Steak'],
-      priceByStyle: { simple: 59.99, grand: 79.99, deluxe: 109.99 }
+      items: [
+        '🍳 Scrambled Egg',
+        '🥓 Bacon',
+        '🍞 Bread',
+        '🥩 Steak'
+      ],
+      priceByStyle: {
+        simple: 59.99,
+        grand: 79.99,
+        deluxe: 109.99
+      }
     },
     'champagne': {
       name: 'Champagne Feast',
@@ -97,8 +116,18 @@ function MenuDetailsScreen() {
       basePrice: 149.99,
       description: 'Luxury celebration dinner',
       servings: '2 people (fixed)',
-      items: ['🍾 Champagne (1 bottle)', '🥖 Baguette (4 pieces)', '☕ Coffee (1 pot)', '🍷 Wine', '🥩 Steak'],
-      priceByStyle: { simple: null, grand: 169.99, deluxe: 199.99 },
+      items: [
+        '🍾 Champagne (1 bottle)',
+        '🥖 Baguette (4 pieces)',
+        '☕ Coffee (1 pot)',
+        '🍷 Wine',
+        '🥩 Steak'
+      ],
+      priceByStyle: {
+        simple: null,
+        grand: 169.99,
+        deluxe: 199.99
+      },
       fixedQuantity: 2
     }
   };
@@ -120,7 +149,12 @@ function MenuDetailsScreen() {
     }
   };
 
-  const availableStyles = dinnerType === 'champagne' ? ['grand', 'deluxe'] : ['simple', 'grand', 'deluxe'];
+  // ============================================
+  // 스타일 및 가격 계산
+  // ============================================
+  const availableStyles = dinnerType === 'champagne' 
+    ? ['grand', 'deluxe'] 
+    : ['simple', 'grand', 'deluxe'];
 
   let currentPrice = dinner.priceByStyle[style];
   if (currentPrice === null) {
@@ -130,13 +164,15 @@ function MenuDetailsScreen() {
   }
 
   const isChampaigneFeast = dinnerType === 'champagne';
-  const displayQuantity = isChampaigneFeast ? 1 : quantity; // 샴페인 피스트는 고정 수량
+  const displayQuantity = isChampaigneFeast ? 1 : quantity;
   
   const discountedPrice = (currentPrice * (1 - discountRate / 100)).toFixed(2);
   const discountAmount = (currentPrice - discountedPrice).toFixed(2);
   const totalPrice = (discountedPrice * displayQuantity).toFixed(2);
 
-  // [변경 3] "Add as is" 핸들러 (백엔드로 주문 전송)
+  // ============================================
+  // API: 주문 생성 (Add as is 버튼)
+  // ============================================
   const handleAddAsIs = async () => {
     if (!currentUser) {
       alert('Please login first');
@@ -144,118 +180,409 @@ function MenuDetailsScreen() {
       return;
     }
 
-    // 기본 아이템 데이터가 로딩되지 않았으면 방어
-    if (defaultItems.length === 0) {
-        alert("메뉴 정보를 불러오는 중입니다. 잠시만 기다려주세요.");
-        return;
-    }
-
-    // 백엔드로 보낼 DTO 구성
-    const orderPayload = {
-        customerId: currentUser.id,
-        dinnerType: dinnerType,
-        deliveryAddress: currentUser.address,
-        servingStyle: style, // 스타일 정보도 전송 (백엔드 로직 확장을 위해)
-        items: defaultItems.map(item => ({
-            menuItemId: item.id,
-            // 기본 수량 * 사용자가 선택한 세트 수량
-            // 예: 2인분 시키면 스테이크도 2개
-            quantity: 1 * displayQuantity
-        }))
-    };
+    setLoading(true);
+    setError(null);
 
     try {
-        const response = await axios.post('http://localhost:8080/api/orders', orderPayload);
-        
-        if (response.status === 200 || response.status === 201) {
-            alert(`Order confirmed! Total: $${totalPrice} for ${dinner.name} orderId: ${response.data}`);
-            navigate(`/order-details/${response.data}`); // 백엔드가 준 ID로 이동
-        }
-    } catch (error) {
-        console.error("Order failed", error);
-        alert("주문 처리에 실패했습니다.");
+      // 주문 데이터 구성
+      const newOrder = {
+        customerId: currentUser.id,
+        customerName: currentUser.name,
+        dinnerType: dinnerType,
+        dinnerName: dinner.name,
+        servingStyle: style,
+        basePrice: parseFloat(currentPrice),
+        discountRate: discountRate,
+        discountAmount: parseFloat(discountAmount),
+        addOnsPrice: 0,
+        totalPrice: parseFloat(totalPrice),
+        quantity: displayQuantity,
+        orderTime: new Date().toISOString(),
+        deliveryTime: '30-45 mins',
+        deliveryAddress: currentUser.address,
+        status: 'pending'
+      };
+
+      // ✅ Backend API로 주문 전송
+      const response = await axios.post(
+        'http://localhost:8080/api/orders',
+        newOrder
+      );
+
+      // 성공 응답
+      const orderId = response.data.id || response.data;
+      
+      alert(
+        `Order confirmed! Total: $${totalPrice}${
+          discountRate > 0 ? ` (${discountRate}% discount applied)` : ''
+        }`
+      );
+
+      // 주문 상세 페이지로 이동
+      navigate(`/order-details/${orderId}`);
+
+    } catch (err) {
+      console.error('Order creation failed:', err);
+      setError('주문 생성 실패: ' + (err.response?.data?.message || err.message));
+      alert('주문 실패: ' + (err.response?.data?.message || '다시 시도해주세요'));
+    } finally {
+      setLoading(false);
     }
   };
 
+  // ============================================
+  // UI 렌더링
+  // ============================================
   return (
-    <div style={{ backgroundColor: '#1a1a1a', minHeight: '100vh', padding: '20px', overflow: 'auto' }}>
+    <div style={{
+      backgroundColor: '#1a1a1a',
+      minHeight: '100vh',
+      padding: '20px',
+      overflow: 'auto'
+    }}>
       <div style={{ maxWidth: '500px', margin: '0 auto' }}>
-        <button onClick={() => navigate('/customer-home')} style={{ background: 'none', border: 'none', color: '#b0b0b0', fontSize: '20px', cursor: 'pointer', marginBottom: '20px' }}>
+        {/* 뒤로 가기 */}
+        <button
+          onClick={() => navigate('/customer-home')}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: '#b0b0b0',
+            fontSize: '20px',
+            cursor: 'pointer',
+            marginBottom: '20px'
+          }}
+        >
           ← Back
         </button>
 
-        <div style={{ fontSize: '80px', textAlign: 'center', marginBottom: '20px' }}>{dinner.icon}</div>
-        <h1 style={{ fontSize: '28px', fontWeight: 'bold', color: '#FFFFFF', marginBottom: '10px', textAlign: 'center' }}>{dinner.name}</h1>
-        <p style={{ fontSize: '14px', color: '#b0b0b0', textAlign: 'center', marginBottom: '10px' }}>{dinner.description}</p>
-        <p style={{ fontSize: '12px', color: '#FFC107', textAlign: 'center', marginBottom: '20px', fontWeight: 'bold' }}>👥 {dinner.servings}</p>
-
-        {discountRate > 0 && (
-          <div style={{ backgroundColor: '#2a2a2a', borderRadius: '10px', padding: '12px', marginBottom: '15px', borderLeft: '4px solid #4CAF50', textAlign: 'center' }}>
-            <p style={{ fontSize: '12px', color: '#4CAF50', fontWeight: 'bold', marginBottom: '5px' }}>🎁 Loyalty Discount Applied</p>
-            <p style={{ fontSize: '16px', fontWeight: 'bold', color: '#FFC107' }}>{discountRate}% OFF</p>
+        {/* 에러 메시지 */}
+        {error && (
+          <div style={{
+            backgroundColor: '#FF6B6B',
+            borderRadius: '10px',
+            padding: '12px',
+            marginBottom: '15px',
+            color: '#FFFFFF',
+            fontSize: '12px'
+          }}>
+            ⚠️ {error}
           </div>
         )}
 
-        <h2 style={{ fontSize: '16px', fontWeight: 'bold', color: '#FFFFFF', marginBottom: '15px' }}>What's Included:</h2>
+        {/* 메뉴 아이콘 */}
+        <div style={{
+          fontSize: '80px',
+          textAlign: 'center',
+          marginBottom: '20px'
+        }}>
+          {dinner.icon}
+        </div>
+
+        {/* 메뉴 제목 */}
+        <h1 style={{
+          fontSize: '28px',
+          fontWeight: 'bold',
+          color: '#FFFFFF',
+          marginBottom: '10px',
+          textAlign: 'center'
+        }}>
+          {dinner.name}
+        </h1>
+
+        {/* 설명 */}
+        <p style={{
+          fontSize: '14px',
+          color: '#b0b0b0',
+          textAlign: 'center',
+          marginBottom: '10px'
+        }}>
+          {dinner.description}
+        </p>
+
+        {/* 인원 정보 */}
+        <p style={{
+          fontSize: '12px',
+          color: '#FFC107',
+          textAlign: 'center',
+          marginBottom: '20px',
+          fontWeight: 'bold'
+        }}>
+          👥 {dinner.servings}
+        </p>
+
+        {/* 할인 정보 */}
+        {discountRate > 0 && (
+          <div style={{
+            backgroundColor: '#2a2a2a',
+            borderRadius: '10px',
+            padding: '12px',
+            marginBottom: '15px',
+            borderLeft: '4px solid #4CAF50',
+            textAlign: 'center'
+          }}>
+            <p style={{ fontSize: '12px', color: '#4CAF50', fontWeight: 'bold', marginBottom: '5px' }}>
+              🎁 Loyalty Discount Applied
+            </p>
+            <p style={{ fontSize: '16px', fontWeight: 'bold', color: '#FFC107' }}>
+              {discountRate}% OFF
+            </p>
+          </div>
+        )}
+
+        {/* 포함 항목들 */}
+        <h2 style={{
+          fontSize: '16px',
+          fontWeight: 'bold',
+          color: '#FFFFFF',
+          marginBottom: '15px'
+        }}>
+          What's Included:
+        </h2>
+
         {dinner.items.map((item, index) => (
-          <div key={index} style={{ backgroundColor: '#2a2a2a', borderRadius: '10px', padding: '12px', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div
+            key={index}
+            style={{
+              backgroundColor: '#2a2a2a',
+              borderRadius: '10px',
+              padding: '12px',
+              marginBottom: '10px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px'
+            }}
+          >
             <span style={{ fontSize: '18px' }}>✓</span>
             <span style={{ color: '#b0b0b0', fontSize: '14px' }}>{item}</span>
           </div>
         ))}
 
-        <h2 style={{ fontSize: '16px', fontWeight: 'bold', color: '#FFFFFF', marginTop: '30px', marginBottom: '15px' }}>Serving Style:</h2>
+        {/* 서빙 스타일 선택 */}
+        <h2 style={{
+          fontSize: '16px',
+          fontWeight: 'bold',
+          color: '#FFFFFF',
+          marginTop: '30px',
+          marginBottom: '15px'
+        }}>
+          Serving Style:
+        </h2>
+
         {availableStyles.map((styleOption) => (
-          <div key={styleOption} onClick={() => setStyle(styleOption)} style={{ backgroundColor: style === styleOption ? '#FFC107' : '#2a2a2a', borderRadius: '10px', padding: '15px', marginBottom: '10px', cursor: 'pointer', transition: '0.3s', borderLeft: style === styleOption ? '4px solid #000000' : '4px solid transparent' }}>
-            <p style={{ color: style === styleOption ? '#000000' : '#FFFFFF', fontWeight: 'bold', marginBottom: '8px', fontSize: '16px' }}>{styleDescriptions[styleOption].title}</p>
-            <p style={{ color: style === styleOption ? '#000000' : '#b0b0b0', fontSize: '12px', lineHeight: '1.6' }}>{styleDescriptions[styleOption].details.join(' • ')}</p>
-            <p style={{ color: style === styleOption ? '#000000' : '#FFC107', fontWeight: 'bold', marginTop: '8px', fontSize: '14px' }}>${dinner.priceByStyle[styleOption]}</p>
+          <div
+            key={styleOption}
+            onClick={() => setStyle(styleOption)}
+            style={{
+              backgroundColor: style === styleOption ? '#FFC107' : '#2a2a2a',
+              borderRadius: '10px',
+              padding: '15px',
+              marginBottom: '10px',
+              cursor: 'pointer',
+              transition: '0.3s',
+              borderLeft: style === styleOption ? '4px solid #000000' : '4px solid transparent'
+            }}
+          >
+            <p style={{
+              color: style === styleOption ? '#000000' : '#FFFFFF',
+              fontWeight: 'bold',
+              marginBottom: '8px',
+              fontSize: '16px'
+            }}>
+              {styleDescriptions[styleOption].title}
+            </p>
+            <p style={{
+              color: style === styleOption ? '#000000' : '#b0b0b0',
+              fontSize: '12px',
+              lineHeight: '1.6'
+            }}>
+              {styleDescriptions[styleOption].details.join(' • ')}
+            </p>
+            <p style={{
+              color: style === styleOption ? '#000000' : '#FFC107',
+              fontWeight: 'bold',
+              marginTop: '8px',
+              fontSize: '14px'
+            }}>
+              ${dinner.priceByStyle[styleOption]}
+            </p>
           </div>
         ))}
 
+        {/* 수량 선택 (Champagne 제외) */}
         {!isChampaigneFeast && (
           <>
-            <h2 style={{ fontSize: '16px', fontWeight: 'bold', color: '#FFFFFF', marginTop: '30px', marginBottom: '15px' }}>Quantity:</h2>
-            <div style={{ display: 'flex', gap: '15px', marginBottom: '30px' }}>
-              <button onClick={() => setQuantity(Math.max(1, quantity - 1))} style={{ width: '50px', height: '50px', backgroundColor: '#2a2a2a', border: 'none', borderRadius: '8px', color: '#FFC107', fontSize: '20px', cursor: 'pointer' }}>−</button>
-              <div style={{ flex: 1, backgroundColor: '#2a2a2a', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', color: '#FFFFFF', fontWeight: 'bold' }}>{quantity}</div>
-              <button onClick={() => setQuantity(quantity + 1)} style={{ width: '50px', height: '50px', backgroundColor: '#2a2a2a', border: 'none', borderRadius: '8px', color: '#FFC107', fontSize: '20px', cursor: 'pointer' }}>+</button>
+            <h2 style={{
+              fontSize: '16px',
+              fontWeight: 'bold',
+              color: '#FFFFFF',
+              marginTop: '30px',
+              marginBottom: '15px'
+            }}>
+              Quantity:
+            </h2>
+
+            <div style={{
+              display: 'flex',
+              gap: '15px',
+              marginBottom: '30px'
+            }}>
+              <button
+                onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                style={{
+                  width: '50px',
+                  height: '50px',
+                  backgroundColor: '#2a2a2a',
+                  border: 'none',
+                  borderRadius: '8px',
+                  color: '#FFC107',
+                  fontSize: '20px',
+                  cursor: 'pointer'
+                }}
+              >
+                −
+              </button>
+
+              <div style={{
+                flex: 1,
+                backgroundColor: '#2a2a2a',
+                borderRadius: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '20px',
+                color: '#FFFFFF',
+                fontWeight: 'bold'
+              }}>
+                {quantity}
+              </div>
+
+              <button
+                onClick={() => setQuantity(quantity + 1)}
+                style={{
+                  width: '50px',
+                  height: '50px',
+                  backgroundColor: '#2a2a2a',
+                  border: 'none',
+                  borderRadius: '8px',
+                  color: '#FFC107',
+                  fontSize: '20px',
+                  cursor: 'pointer'
+                }}
+              >
+                +
+              </button>
             </div>
           </>
         )}
 
         {isChampaigneFeast && (
-          <div style={{ backgroundColor: '#2a2a2a', borderRadius: '10px', padding: '15px', marginTop: '30px', marginBottom: '30px', borderLeft: '4px solid #FFC107' }}>
-            <p style={{ color: '#FFC107', fontWeight: 'bold', marginBottom: '5px' }}>ℹ️ Fixed Quantity</p>
-            <p style={{ color: '#b0b0b0', fontSize: '12px' }}>This dinner is for 2 people only. Cannot be combined with other orders.</p>
+          <div style={{
+            backgroundColor: '#2a2a2a',
+            borderRadius: '10px',
+            padding: '15px',
+            marginTop: '30px',
+            marginBottom: '30px',
+            borderLeft: '4px solid #FFC107'
+          }}>
+            <p style={{ color: '#FFC107', fontWeight: 'bold', marginBottom: '5px' }}>
+              ℹ️ Fixed Quantity
+            </p>
+            <p style={{ color: '#b0b0b0', fontSize: '12px' }}>
+              This dinner is for 2 people only. Cannot be combined with other orders.
+            </p>
           </div>
         )}
 
-        <div style={{ backgroundColor: '#2a2a2a', borderRadius: '15px', padding: '20px', marginBottom: '20px' }}>
-          <p style={{ fontSize: '14px', color: '#b0b0b0', marginBottom: '10px' }}>Total Price:</p>
-          <p style={{ fontSize: '32px', fontWeight: 'bold', color: '#FFC107' }}>${totalPrice}</p>
-          {!isChampaigneFeast && <p style={{ fontSize: '12px', color: '#b0b0b0', marginTop: '10px' }}>{displayQuantity} × ${discountedPrice}</p>}
+        {/* 총 가격 */}
+        <div style={{
+          backgroundColor: '#2a2a2a',
+          borderRadius: '15px',
+          padding: '20px',
+          marginBottom: '20px'
+        }}>
+          <p style={{
+            fontSize: '14px',
+            color: '#b0b0b0',
+            marginBottom: '10px'
+          }}>
+            Total Price:
+          </p>
+          <p style={{
+            fontSize: '32px',
+            fontWeight: 'bold',
+            color: '#FFC107'
+          }}>
+            ${totalPrice}
+          </p>
+          
+          {!isChampaigneFeast && (
+            <p style={{
+              fontSize: '12px',
+              color: '#b0b0b0',
+              marginTop: '10px'
+            }}>
+              {displayQuantity} × ${discountedPrice}
+            </p>
+          )}
+
           {discountRate > 0 && (
-            <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #3a3a3a' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px', fontSize: '12px' }}>
+            <div style={{
+              marginTop: '12px',
+              paddingTop: '12px',
+              borderTop: '1px solid #3a3a3a'
+            }}>
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                marginBottom: '5px',
+                fontSize: '12px'
+              }}>
                 <span style={{ color: '#b0b0b0' }}>Original: ${(currentPrice * displayQuantity).toFixed(2)}</span>
                 <span style={{ color: '#4CAF50' }}>-${(discountAmount * displayQuantity).toFixed(2)}</span>
               </div>
-              <p style={{ fontSize: '11px', color: '#4CAF50', fontWeight: 'bold' }}>✓ {discountRate}% Loyalty discount applied</p>
+              <p style={{
+                fontSize: '11px',
+                color: '#4CAF50',
+                fontWeight: 'bold'
+              }}>
+                ✓ {discountRate}% Loyalty discount applied
+              </p>
             </div>
           )}
         </div>
 
-        <button onClick={() => navigate(`/customize-order/${dinnerType}`)} className="btn-primary" style={{ marginBottom: '15px', width: '100%', padding: '15px', borderRadius: '10px', backgroundColor: '#FFC107', border: 'none', fontWeight: 'bold', fontSize: '16px', cursor: 'pointer' }}>
+        {/* 버튼들 */}
+        <button
+          onClick={() => navigate(`/customize-order/${dinnerType}`)}
+          className="btn-primary"
+          style={{ marginBottom: '15px' }}
+        >
           Customize & Continue
         </button>
 
-        {/* [변경 4] Add as is 버튼에 핸들러 연결 */}
-        <button onClick={handleAddAsIs} className="btn-secondary" style={{ marginBottom: '15px', width: '100%', padding: '15px', borderRadius: '10px', backgroundColor: '#444', border: 'none', color: 'white', fontWeight: 'bold', fontSize: '16px', cursor: 'pointer' }}>
-          Add as is
+        <button
+          onClick={handleAddAsIs}
+          disabled={loading}
+          className="btn-secondary"
+          style={{ 
+            marginBottom: '15px',
+            opacity: loading ? 0.5 : 1,
+            cursor: loading ? 'not-allowed' : 'pointer'
+          }}
+        >
+          {loading ? '⏳ Processing...' : 'Add as is'}
         </button>
 
-        <button onClick={() => navigate('/customer-home')} className="btn-secondary" style={{ width: '100%', padding: '15px', borderRadius: '10px', backgroundColor: '#444', border: 'none', color: 'white', fontWeight: 'bold', fontSize: '16px', cursor: 'pointer' }}>
+        <button
+          onClick={() => navigate('/customer-home')}
+          disabled={loading}
+          className="btn-secondary"
+          style={{
+            opacity: loading ? 0.5 : 1,
+            cursor: loading ? 'not-allowed' : 'pointer'
+          }}
+        >
           Cancel
         </button>
       </div>

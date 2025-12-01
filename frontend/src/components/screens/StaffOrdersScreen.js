@@ -1,93 +1,174 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import '../../App.css';
 
 function StaffOrdersScreen() {
   const navigate = useNavigate();
+  
+  // ============================================
+  // 상태 관리
+  // ============================================
   const [selectedStatus, setSelectedStatus] = useState('all');
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [updatingId, setUpdatingId] = useState(null);
 
-  const orders = [
-    {
-      id: '#ORD001',
-      customer: 'John Doe',
-      dinner: 'Valentine Dinner',
-      time: '19:00',
-      status: 'pending',
-      items: 2,
-      price: 89.99
-    },
-    {
-      id: '#ORD002',
-      customer: 'Jane Smith',
-      dinner: 'French Dinner',
-      time: '20:00',
-      status: 'in-progress',
-      items: 1,
-      price: 75.99
-    },
-    {
-      id: '#ORD003',
-      customer: 'Mike Johnson',
-      dinner: 'Champagne Feast',
-      time: '21:00',
-      status: 'ready',
-      items: 4,
-      price: 120.99
-    },
-    {
-      id: '#ORD004',
-      customer: 'Sarah Lee',
-      dinner: 'English Dinner',
-      time: '19:30',
-      status: 'delivered',
-      items: 2,
-      price: 65.99
-    },
-    {
-      id: '#ORD005',
-      customer: 'Tom Brown',
-      dinner: 'Valentine Dinner',
-      time: '20:30',
-      status: 'pending',
-      items: 3,
-      price: 89.99
+  // ============================================
+  // 컴포넌트 로드 시 주문 조회 (자동 새로고침)
+  // ============================================
+  useEffect(() => {
+    // 초기 로드
+    fetchOrders();
+    
+    // ⏰ 5초마다 자동으로 새 주문 확인
+    const interval = setInterval(fetchOrders, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // ============================================
+  // API: 주문 목록 조회
+  // ============================================
+  const fetchOrders = async () => {
+    try {
+      setError(null);
+      setLoading(true);
+      
+      // ✅ Backend에서 모든 주문 조회
+      const response = await axios.get(
+        'http://localhost:8080/api/orders'
+      );
+      
+      // 받은 주문 데이터 저장
+      const fetchedOrders = Array.isArray(response.data) 
+        ? response.data 
+        : response.data.orders || [];
+      
+      setOrders(fetchedOrders);
+      setLoading(false);
+      
+    } catch (err) {
+      console.error('Failed to fetch orders:', err);
+      setError('주문을 불러올 수 없습니다');
+      setLoading(false);
+      
+      // 개발용: 에러 시 더미 데이터 표시
+      setOrders([]);
     }
-  ];
+  };
 
-  const filteredOrders = selectedStatus === 'all' 
-    ? orders 
-    : orders.filter(order => order.status === selectedStatus);
+  // ============================================
+  // API: 주문 상태 업데이트
+  // ============================================
+  const updateOrderStatus = async (orderId, newStatus) => {
+    try {
+      setUpdatingId(orderId);
+      setError(null);
+      
+      // ✅ Backend에 상태 업데이트 요청
+      await axios.patch(
+        `http://localhost:8080/api/orders/${orderId}/status`,
+        { status: newStatus }
+      );
+      
+      // 업데이트 성공 후 주문 목록 다시 조회
+      fetchOrders();
+      alert('주문 상태가 업데이트되었습니다');
+      
+    } catch (err) {
+      console.error('Failed to update order status:', err);
+      setError('상태 업데이트 실패: ' + (err.response?.data?.message || err.message));
+      alert('상태 업데이트 실패');
+    } finally {
+      setUpdatingId(null);
+    }
+  };
 
+  // ============================================
+  // 상태별 필터링
+  // ============================================
+  const filteredOrders = selectedStatus === 'all'
+    ? orders
+    : orders.filter(order => {
+        const status = order.status?.toLowerCase() || order.orderStatus?.toLowerCase();
+        return status === selectedStatus;
+      });
+
+  // ============================================
+  // 상태별 색상
+  // ============================================
   const getStatusColor = (status) => {
-    switch (status) {
+    const normalizedStatus = status?.toLowerCase();
+    switch (normalizedStatus) {
       case 'pending':
         return '#FF9800';
       case 'in-progress':
+      case 'inprogress':
         return '#2196F3';
       case 'ready':
         return '#4CAF50';
       case 'delivered':
         return '#9E9E9E';
+      case 'cancelled':
+        return '#FF5252';
       default:
         return '#FFC107';
     }
   };
 
+  // ============================================
+  // 상태 텍스트
+  // ============================================
   const getStatusText = (status) => {
-    switch (status) {
-      case 'pending':
-        return 'Pending';
-      case 'in-progress':
-        return 'In Progress';
-      case 'ready':
-        return 'Ready';
-      case 'delivered':
-        return 'Delivered';
-      default:
-        return status;
-    }
+    const normalizedStatus = status?.toLowerCase();
+    const statusMap = {
+      'pending': 'Pending',
+      'in-progress': 'In Progress',
+      'inprogress': 'In Progress',
+      'ready': 'Ready',
+      'delivered': 'Delivered',
+      'cancelled': 'Cancelled'
+    };
+    return statusMap[normalizedStatus] || status;
   };
 
+  // ============================================
+  // 다음 상태 반환
+  // ============================================
+  const getNextStatus = (currentStatus) => {
+    const normalizedStatus = currentStatus?.toLowerCase();
+    const statusFlow = {
+      'pending': 'in-progress',
+      'in-progress': 'ready',
+      'inprogress': 'ready',
+      'ready': 'delivered'
+    };
+    return statusFlow[normalizedStatus] || 'delivered';
+  };
+
+  // ============================================
+  // 주문 통계
+  // ============================================
+  const pendingCount = orders.filter(o => 
+    o.status?.toLowerCase() === 'pending' || 
+    o.orderStatus?.toLowerCase() === 'pending'
+  ).length;
+
+  const inProgressCount = orders.filter(o => 
+    o.status?.toLowerCase() === 'in-progress' || 
+    o.status?.toLowerCase() === 'inprogress' ||
+    o.orderStatus?.toLowerCase() === 'in-progress'
+  ).length;
+
+  const completedCount = orders.filter(o => 
+    o.status?.toLowerCase() === 'delivered' ||
+    o.orderStatus?.toLowerCase() === 'delivered'
+  ).length;
+
+  // ============================================
+  // UI 렌더링
+  // ============================================
   return (
     <div style={{
       backgroundColor: '#1a1a1a',
@@ -96,6 +177,7 @@ function StaffOrdersScreen() {
       overflow: 'auto'
     }}>
       <div style={{ maxWidth: '500px', margin: '0 auto' }}>
+        
         {/* 뒤로 가기 */}
         <button
           onClick={() => navigate('/staff-home')}
@@ -111,149 +193,303 @@ function StaffOrdersScreen() {
           ← Back
         </button>
 
+        {/* 제목 */}
         <h1 style={{
           fontSize: '28px',
           fontWeight: 'bold',
           color: '#FFFFFF',
-          marginBottom: '30px'
+          marginBottom: '10px'
         }}>
           Order Management
         </h1>
 
-        {/* 상태 필터 */}
+        {/* 주문 수 & 새로고침 버튼 */}
         <div style={{
           display: 'flex',
-          gap: '10px',
-          marginBottom: '20px',
-          overflowX: 'auto',
-          paddingBottom: '10px'
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '20px'
         }}>
-          {['all', 'pending', 'in-progress', 'ready', 'delivered'].map((status) => (
-            <button
-              key={status}
-              onClick={() => setSelectedStatus(status)}
-              style={{
-                backgroundColor: selectedStatus === status ? '#FFC107' : '#2a2a2a',
-                color: selectedStatus === status ? '#000000' : '#FFFFFF',
-                border: 'none',
-                borderRadius: '20px',
-                padding: '8px 16px',
-                cursor: 'pointer',
-                fontSize: '12px',
-                fontWeight: 'bold',
-                whiteSpace: 'nowrap',
-                transition: '0.3s'
-              }}
-            >
-              {status.charAt(0).toUpperCase() + status.slice(1).replace('-', ' ')}
-            </button>
-          ))}
-        </div>
-
-        {/* 주문 목록 */}
-        {filteredOrders.map((order) => (
-          <div
-            key={order.id}
+          <p style={{ color: '#b0b0b0', fontSize: '14px' }}>
+            📦 Total: {orders.length} orders
+          </p>
+          <button
+            onClick={fetchOrders}
+            disabled={loading}
             style={{
-              backgroundColor: '#2a2a2a',
-              borderRadius: '15px',
-              padding: '20px',
-              marginBottom: '15px',
-              borderLeft: `4px solid ${getStatusColor(order.status)}`
+              background: 'none',
+              border: 'none',
+              color: '#FFC107',
+              fontSize: '16px',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              fontWeight: 'bold',
+              opacity: loading ? 0.5 : 1
             }}
           >
-            {/* 주문 ID와 상태 */}
+            🔄 Refresh
+          </button>
+        </div>
+
+        {/* 통계 */}
+        {!loading && (
+          <div style={{
+            display: 'flex',
+            gap: '10px',
+            marginBottom: '20px'
+          }}>
             <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: '10px'
+              flex: 1,
+              backgroundColor: '#2a2a2a',
+              borderRadius: '10px',
+              padding: '10px',
+              textAlign: 'center',
+              borderLeft: '3px solid #FF9800'
             }}>
-              <p style={{
-                fontSize: '16px',
-                fontWeight: 'bold',
-                color: '#FFFFFF'
-              }}>
-                {order.id}
+              <p style={{ fontSize: '12px', color: '#b0b0b0' }}>Pending</p>
+              <p style={{ fontSize: '20px', fontWeight: 'bold', color: '#FF9800' }}>
+                {pendingCount}
               </p>
-              <div style={{
-                backgroundColor: getStatusColor(order.status),
-                borderRadius: '6px',
-                padding: '4px 10px',
-                fontSize: '11px',
-                fontWeight: 'bold',
-                color: '#000000'
-              }}>
-                {getStatusText(order.status)}
-              </div>
             </div>
-
-            {/* 고객명과 시간 */}
-            <p style={{
-              fontSize: '14px',
-              color: '#b0b0b0',
-              marginBottom: '5px'
-            }}>
-              {order.customer}
-            </p>
-
-            {/* 메뉴 정보 */}
-            <p style={{
-              fontSize: '14px',
-              color: '#FFFFFF',
-              fontWeight: 'bold',
-              marginBottom: '10px'
-            }}>
-              {order.dinner}
-            </p>
-
-            {/* 가격과 시간 */}
             <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              paddingTop: '10px',
-              borderTop: '1px solid #3a3a3a'
+              flex: 1,
+              backgroundColor: '#2a2a2a',
+              borderRadius: '10px',
+              padding: '10px',
+              textAlign: 'center',
+              borderLeft: '3px solid #2196F3'
             }}>
-              <span style={{ color: '#FFC107', fontWeight: 'bold' }}>
-                ${order.price}
-              </span>
-              <span style={{ color: '#b0b0b0', fontSize: '12px' }}>
-                {order.time}
-              </span>
+              <p style={{ fontSize: '12px', color: '#b0b0b0' }}>In Progress</p>
+              <p style={{ fontSize: '20px', fontWeight: 'bold', color: '#2196F3' }}>
+                {inProgressCount}
+              </p>
             </div>
-
-            {/* 액션 버튼 */}
-            {order.status !== 'delivered' && (
-              <button
-                onClick={() => alert('Order status updated!')}
-                style={{
-                  width: '100%',
-                  marginTop: '10px',
-                  backgroundColor: '#FFC107',
-                  border: 'none',
-                  borderRadius: '8px',
-                  padding: '8px',
-                  color: '#000000',
-                  fontWeight: 'bold',
-                  cursor: 'pointer'
-                }}
-              >
-                Update Status
-              </button>
-            )}
+            <div style={{
+              flex: 1,
+              backgroundColor: '#2a2a2a',
+              borderRadius: '10px',
+              padding: '10px',
+              textAlign: 'center',
+              borderLeft: '3px solid #4CAF50'
+            }}>
+              <p style={{ fontSize: '12px', color: '#b0b0b0' }}>Completed</p>
+              <p style={{ fontSize: '20px', fontWeight: 'bold', color: '#4CAF50' }}>
+                {completedCount}
+              </p>
+            </div>
           </div>
-        ))}
+        )}
 
-        {filteredOrders.length === 0 && (
+        {/* 에러 메시지 */}
+        {error && (
+          <div style={{
+            backgroundColor: '#FF6B6B',
+            borderRadius: '10px',
+            padding: '12px',
+            marginBottom: '20px',
+            color: '#FFFFFF',
+            fontSize: '12px'
+          }}>
+            ⚠️ {error}
+          </div>
+        )}
+
+        {/* 로딩 중 */}
+        {loading && (
           <div style={{
             textAlign: 'center',
             padding: '40px 20px',
             color: '#b0b0b0'
           }}>
-            <p style={{ fontSize: '18px', marginBottom: '10px' }}>📭</p>
-            <p>No orders found</p>
+            <p>⏳ Loading orders...</p>
           </div>
+        )}
+
+        {/* 상태 필터 버튼 */}
+        {!loading && (
+          <>
+            <div style={{
+              display: 'flex',
+              gap: '10px',
+              marginBottom: '20px',
+              overflowX: 'auto',
+              paddingBottom: '10px'
+            }}>
+              {['all', 'pending', 'in-progress', 'ready', 'delivered'].map((status) => (
+                <button
+                  key={status}
+                  onClick={() => setSelectedStatus(status)}
+                  style={{
+                    backgroundColor: selectedStatus === status ? '#FFC107' : '#2a2a2a',
+                    color: selectedStatus === status ? '#000000' : '#FFFFFF',
+                    border: 'none',
+                    borderRadius: '20px',
+                    padding: '8px 16px',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                    fontWeight: 'bold',
+                    whiteSpace: 'nowrap',
+                    transition: '0.3s'
+                  }}
+                >
+                  {status === 'in-progress' ? 'In Progress' : status.charAt(0).toUpperCase() + status.slice(1)}
+                </button>
+              ))}
+            </div>
+
+            {/* 주문 목록 */}
+            {filteredOrders.length > 0 ? (
+              filteredOrders.map((order) => (
+                <div
+                  key={order.id}
+                  style={{
+                    backgroundColor: '#2a2a2a',
+                    borderRadius: '15px',
+                    padding: '20px',
+                    marginBottom: '15px',
+                    borderLeft: `4px solid ${getStatusColor(order.status || order.orderStatus)}`
+                  }}
+                >
+                  {/* 주문 ID와 상태 */}
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: '10px'
+                  }}>
+                    <p style={{
+                      fontSize: '16px',
+                      fontWeight: 'bold',
+                      color: '#FFFFFF'
+                    }}>
+                      Order #{order.id}
+                    </p>
+                    <div style={{
+                      backgroundColor: getStatusColor(order.status || order.orderStatus),
+                      borderRadius: '6px',
+                      padding: '4px 10px',
+                      fontSize: '11px',
+                      fontWeight: 'bold',
+                      color: (order.status?.toLowerCase() === 'ready' || 
+                               order.status?.toLowerCase() === 'in-progress' ||
+                               order.status?.toLowerCase() === 'inprogress')
+                        ? '#000000' 
+                        : '#FFFFFF'
+                    }}>
+                      {getStatusText(order.status || order.orderStatus)}
+                    </div>
+                  </div>
+
+                  {/* 고객 정보 */}
+                  <p style={{
+                    fontSize: '14px',
+                    color: '#b0b0b0',
+                    marginBottom: '5px'
+                  }}>
+                    👤 {order.customerName || 'Unknown'}
+                  </p>
+
+                  {/* 메뉴 정보 */}
+                  <p style={{
+                    fontSize: '14px',
+                    color: '#FFFFFF',
+                    fontWeight: 'bold',
+                    marginBottom: '10px'
+                  }}>
+                    🍽️ {order.dinnerName || order.dinnerType || 'Dinner'}
+                  </p>
+
+                  {/* 배송 주소 */}
+                  <p style={{
+                    fontSize: '12px',
+                    color: '#b0b0b0',
+                    marginBottom: '10px'
+                  }}>
+                    📍 {order.deliveryAddress || 'TBD'}
+                  </p>
+
+                  {/* 가격과 시간 */}
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    paddingTop: '10px',
+                    borderTop: '1px solid #3a3a3a',
+                    marginBottom: '15px'
+                  }}>
+                    <span style={{ color: '#FFC107', fontWeight: 'bold' }}>
+                      ${parseFloat(order.totalPrice || 0).toFixed(2)}
+                    </span>
+                    <span style={{ color: '#b0b0b0', fontSize: '12px' }}>
+                      ⏰ {order.orderTime 
+                        ? new Date(order.orderTime).toLocaleTimeString() 
+                        : 'TBD'}
+                    </span>
+                  </div>
+
+                  {/* 상태 업데이트 버튼 */}
+                  {(order.status?.toLowerCase() !== 'delivered' && 
+                    order.orderStatus?.toLowerCase() !== 'delivered') ? (
+                    <button
+                      onClick={() => {
+                        const currentStatus = order.status?.toLowerCase() || order.orderStatus?.toLowerCase();
+                        updateOrderStatus(order.id, getNextStatus(currentStatus));
+                      }}
+                      disabled={updatingId === order.id}
+                      style={{
+                        width: '100%',
+                        backgroundColor: '#FFC107',
+                        border: 'none',
+                        borderRadius: '8px',
+                        padding: '10px',
+                        color: '#000000',
+                        fontWeight: 'bold',
+                        cursor: updatingId === order.id ? 'not-allowed' : 'pointer',
+                        fontSize: '14px',
+                        opacity: updatingId === order.id ? 0.5 : 1,
+                        transition: '0.3s'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (updatingId !== order.id) {
+                          e.currentTarget.style.backgroundColor = '#FFD54F';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (updatingId !== order.id) {
+                          e.currentTarget.style.backgroundColor = '#FFC107';
+                        }
+                      }}
+                    >
+                      {updatingId === order.id 
+                        ? '⏳ Processing...' 
+                        : `✅ Mark as ${getStatusText(getNextStatus(order.status || order.orderStatus))}`
+                      }
+                    </button>
+                  ) : (
+                    <div style={{
+                      backgroundColor: '#1a4d2e',
+                      borderRadius: '8px',
+                      padding: '10px',
+                      textAlign: 'center',
+                      color: '#4CAF50',
+                      fontWeight: 'bold',
+                      fontSize: '14px'
+                    }}>
+                      ✅ Delivered
+                    </div>
+                  )}
+                </div>
+              ))
+            ) : (
+              <div style={{
+                textAlign: 'center',
+                padding: '40px 20px',
+                color: '#b0b0b0'
+              }}>
+                <p style={{ fontSize: '24px', marginBottom: '10px' }}>📭</p>
+                <p>No orders in this status</p>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
