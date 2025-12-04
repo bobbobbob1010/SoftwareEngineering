@@ -6,22 +6,17 @@ import axios from 'axios';
 
 function StaffInventoryScreen() {
   const navigate = useNavigate();
-  // const [inventory, setInventory] = useState([
-  //   { id: 1, name: 'Beef', quantity: 25, unit: 'kg', min: 10, status: 'good' },
-  //   { id: 2, name: 'Chicken', quantity: 15, unit: 'kg', min: 10, status: 'good' },
-  //   { id: 3, name: 'Fish', quantity: 8, unit: 'kg', min: 10, status: 'low' },
-  //   { id: 4, name: 'Salmon', quantity: 5, unit: 'kg', min: 8, status: 'critical' },
-  //   { id: 5, name: 'Vegetables', quantity: 30, unit: 'kg', min: 15, status: 'good' },
-  //   { id: 6, name: 'Champagne', quantity: 12, unit: 'bottles', min: 10, status: 'good' },
-  //   { id: 7, name: 'Wine', quantity: 8, unit: 'bottles', min: 10, status: 'low' },
-  //   { id: 8, name: 'Caviar', quantity: 2, unit: 'kg', min: 1, status: 'good' }
-  // ]);
-
   const [inventory, setInventory] = useState([]);
+
+  //추가: 4가지 메뉴의 기본 재료들만 정의 (liquor는 나중에 따로 관리)
+  const baseItems = ['Steak', 'Coffee', 'Salad', 'Scrambled Egg', 'Bacon', 'Bread', 'Heart Decoration', 'Napkin', 'Baguette (4)'];
 
   useEffect(() => {
     axios.get('http://localhost:8080/api/inventories')
       .then(response => {
+        //임시 테스트용 치워도 됨
+        //console.log('백엔드 응답:', response.data);
+
         // 백엔드 데이터를 프론트엔드 변수명으로 변환 (Mapping)
         const formattedData = response.data.map(item => ({
           id: item.stockID,           // 백엔드 stockID -> 프론트 id
@@ -32,8 +27,14 @@ function StaffInventoryScreen() {
           status: item.status.toLowerCase() // 대문자(Good) -> 소문자(good)
         }));
         
+        // baseItems에 있는 것들만
+        const filteredData = formattedData.filter(item => baseItems.includes(item.name));
+        //임시 테스트용 치워도 됨
+        //console.log('필터 전:', formattedData);   
+        //console.log('필터 후:', filteredData);    
+
         // 변환된 데이터로 상태 업데이트
-        setInventory(formattedData);
+        setInventory(filteredData);
       })
       .catch(error => {
         console.error("재고 불러오기 실패:", error);
@@ -67,7 +68,7 @@ function StaffInventoryScreen() {
   };
 
   // ==========================================
-  // [수정] 수량 변경 및 DB 업데이트 로직
+  // 수량 변경 및 DB 업데이트 로직
   // ==========================================
   const handleUpdateQuantity = async (id, newQuantity) => {
     // 1. 음수 방지 (0보다 작아질 수 없음)
@@ -81,11 +82,10 @@ function StaffInventoryScreen() {
       });
 
       // 3. 요청이 성공하면 프론트엔드 화면(State)도 업데이트
-      // (이때, 수량이 바뀌면 status도 변할 수 있으므로 간단한 상태 계산 로직을 추가하면 더 좋습니다)
       setInventory(prevInventory =>
         prevInventory.map(item => {
           if (item.id === id) {
-            // 수량이 바뀌었으니 상태(Good/Low/Critical)도 프론트에서 미리 계산해서 보여줌 (UX 향상)
+            // 수량이 바뀌었으니 상태(Good/Low/Critical)도 프론트에서 미리 계산해서 보여줌
             let newStatus = 'good';
             if (newQuantity <= 0) newStatus = 'critical';
             else if (newQuantity <= item.min) newStatus = 'low';
