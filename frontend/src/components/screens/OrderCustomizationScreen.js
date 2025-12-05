@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import '../../App.css';
 import axios from 'axios';
 
@@ -25,12 +26,32 @@ function OrderCustomizationScreen() {
     'english': { name: 'English Dinner', icon: '🇬🇧', basePrice: 79.99 },
     'champagne': { name: 'Champagne Feast', icon: '🥂', basePrice: 169.99 }
   };
-  const dinner = dinnerInfo[dinnerType] || dinnerInfo['valentine'];
-  const basePrice = dinner.basePrice;
+
+  // 스타일별 추가 요금
+  const STYLE_EXTRA_FEES = {
+    'simple': -20.00,
+    'grand': 0.00,
+    'deluxe': 30.00
+  };
+
+  const location = useLocation();
+  
+  // 전달받은 state가 있으면 그 값을 쓰고, 없으면 기본값(예: 'grand') 사용
+  // (유저가 URL을 직접 쳐서 들어왔을 경우 state가 null일 수 있으므로 안전장치 필요)
+  const style = location.state?.selectedStyle || 'grand';
+  const quantity = location.state?.currentQuantity || 1;
+
+  console.log("넘겨받은 스타일:", style);
+  const dinner = dinnerInfo[dinnerType] || dinnerInfo['valentine']; //Dinner 정보 가져오기
+  const rawBasePrice = dinner.basePrice;                 // 디너 순수 가격
+  const styleFee = STYLE_EXTRA_FEES[style] || 0;  // 선택된 스타일의 추가금
+  const basePrice = (rawBasePrice + styleFee)* quantity;        // 최종 기본 가격
+
 
   // ==========================================
   // [변경 2] 백엔드에서 메뉴 데이터 가져오기
   // ==========================================
+
   useEffect(() => {
     const fetchMenuData = async () => {
       try {
@@ -44,7 +65,7 @@ function OrderCustomizationScreen() {
         // 데이터 매핑: 백엔드(unitPrice) -> 프론트(addPrice)
         const mappedBaseItems = baseRes.data.map(item => ({
           ...item,
-          quantity: 1,      // 기본 수량
+          quantity: quantity,      // 기본 수량
           included: true,
           addPrice: item.unitPrice
         }));
@@ -127,7 +148,7 @@ function OrderCustomizationScreen() {
     const extraBasicItems = [];
     items.forEach(item => {
       if (item.included) {
-        const baseQuantity = 1;
+        const baseQuantity = quantity;
         const extraQuantity = item.quantity - baseQuantity;
         if (extraQuantity > 0) {
           extraBasicItems.push({
@@ -148,7 +169,7 @@ function OrderCustomizationScreen() {
     let addOnTotal = 0;
     items.forEach(item => {
       if (item.included) {
-        const extraQuantity = Math.max(0, item.quantity - 1);
+        const extraQuantity = Math.max(0, item.quantity - quantity);
         addOnTotal += item.addPrice * extraQuantity;
       }
     });
@@ -187,7 +208,9 @@ function OrderCustomizationScreen() {
         items: [
             ...items.filter(i => i.quantity > 0).map(i => ({ menuItemId: i.id, quantity: i.quantity })),
             ...addedItems.map(i => ({ menuItemId: i.id, quantity: i.quantity }))
-        ]
+        ],
+        servingStyle : style,
+        quantity : quantity
     };
 
     try {
@@ -196,9 +219,9 @@ function OrderCustomizationScreen() {
             alert(`Order confirmed! Order ID: ${response.data}`);
             navigate(`/order-details/${response.data}`); // 백엔드가 준 ID로 이동
         }
-    } catch (error) {
-        console.error("Order failed", error);
-        alert("주문 처리에 실패했습니다.");
+    } catch (err) {
+        console.error("Order failed", err);
+        alert("주문 처리에 실패했습니다.\n"+(err.response?.data?.message || err.message));
     }
   };
 
@@ -228,12 +251,12 @@ function OrderCustomizationScreen() {
         {/* 📋 기본 구성품 */}
         <h2 style={{ fontSize: '16px', fontWeight: 'bold', color: '#FFFFFF', marginBottom: '15px' }}>📋 Included Items:</h2>
         {items.map((item) => {
-          const isExtra = item.quantity > 1;
+          const isExtra = item.quantity > quantity;
           return (
             <div key={item.id} style={{ backgroundColor: '#2a2a2a', borderRadius: '10px', padding: '15px', marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', opacity: item.quantity === 0 ? 0.5 : 1 }}>
               <div style={{ flex: 1 }}>
                 <span style={{ color: item.quantity === 0 ? '#888' : '#FFF', textDecoration: item.quantity === 0 ? 'line-through' : 'none' }}>{item.name}</span>
-                <p style={{ fontSize: '11px', color: '#b0b0b0' }}>Included: 1 {isExtra && ` (+${item.quantity - 1} extra)`}</p>
+                <p style={{ fontSize: '11px', color: '#b0b0b0' }}>Included: {quantity} {isExtra && ` (+${item.quantity - quantity} extra)`}</p>
               </div>
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                 <button onClick={() => handleQuantityChange(item.id, Math.max(0, item.quantity - 1))} style={{ width: '30px', height: '30px', backgroundColor: '#FF6B6B', border: 'none', borderRadius: '5px', color:'white' }}>−</button>

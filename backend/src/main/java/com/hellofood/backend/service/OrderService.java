@@ -35,10 +35,17 @@ public class OrderService {
 
     // 디너 세트별 기본 가격 (DB에 DinnerSet 엔티티가 따로 없다면 상수로 관리)
     private static final Map<String, BigDecimal> DINNER_BASE_PRICES = Map.of(
-        "valentine", new BigDecimal("99.99"),
-        "french", new BigDecimal("89.99"),
-        "english", new BigDecimal("79.99"),
+        "valentine", new BigDecimal("79.99"),
+        "french", new BigDecimal("69.99"),
+        "english", new BigDecimal("59.99"),
         "champagne", new BigDecimal("169.99")
+    );
+
+    // 서빙 스타일별 추가 요금
+    private static final Map<String, BigDecimal> STYLE_EXTRA_FEES = Map.of(
+        "simple", BigDecimal.ZERO,         // 심플은 추가금 없음
+        "grand", new BigDecimal("20.00"),  // 웅장한 스타일은 20달러 추가
+        "deluxe", new BigDecimal("50.00")  // 디럭스는 50달러 추가
     );
 
     @Transactional
@@ -48,9 +55,18 @@ public class OrderService {
         User user = customerRepository.findById(request.getCustomerId())
             .orElseThrow(() -> new IllegalArgumentException("Invalid customer ID"));
         
+        
+        String style = request.getServingStyle() != null ? request.getServingStyle() : "simple";
+        System.out.println("style: "+ style);
+        BigDecimal styleFee = STYLE_EXTRA_FEES.getOrDefault(style, BigDecimal.ZERO);
+        System.out.println("styleFee: "+ styleFee);
+
         // 2. 기본 가격 설정
-        BigDecimal basePrice = DINNER_BASE_PRICES.getOrDefault(request.getDinnerType(), BigDecimal.ZERO);
-        BigDecimal totalPrice = basePrice;
+        BigDecimal basePrice = DINNER_BASE_PRICES
+                                .getOrDefault(request.getDinnerType(), BigDecimal.ZERO);
+        BigDecimal totalPrice = basePrice.add(styleFee); //BigDecimal은 "+" 미지원
+        totalPrice = totalPrice.multiply(BigDecimal.valueOf(request.getQuantity()));
+        System.out.println("quantity"+ request.getQuantity() +"\ttotalPrice: "+ totalPrice);
 
         // 3. 주문 객체 생성
         Order order = new Order(
@@ -60,7 +76,8 @@ public class OrderService {
             Order.OrderStatus.PENDING, // 초기 상태
             BigDecimal.ZERO, // 나중에 업데이트
             (Customer) user, // 캐스팅 필요 (설계에 따라 다름)
-            request.getDinnerType()
+            request.getDinnerType(),
+            request.getServingStyle()
         );
 
         // 4. OrderItem 생성 및 가격 계산
@@ -82,8 +99,8 @@ public class OrderService {
             BigDecimal itemTotal;
 
             if (isBaseItem) {
-                // 기본 포함 메뉴라면: 수량에서 1을 뺀 만큼만 추가 가격 계산
-                int extraQuantity = Math.max(0,itemDto.getQuantity() - 1);
+                // 기본 포함 메뉴라면: 수량에서 (세트 메뉴 수)을 뺀 만큼만 추가 가격 계산
+                int extraQuantity = Math.max(0,itemDto.getQuantity() - request.getQuantity());
                 itemTotal = menuItem.getUnitPrice().multiply(BigDecimal.valueOf(extraQuantity));
             } else {
                 // 추가 메뉴(Add-on): 단가 * 수량 만큼 추가

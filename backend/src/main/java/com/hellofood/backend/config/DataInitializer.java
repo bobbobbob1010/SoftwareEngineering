@@ -195,7 +195,7 @@ public class DataInitializer implements ApplicationRunner {
             // 주의: 프론트엔드 데이터의 'min'은 생성자의 3번째 인자인 'minQuantity'로 들어갑니다.
             MenuItem vWine = new MenuItem("🍷 Wine (1 glass)", new BigDecimal("12.99"), "Drinks", true, "valentine");
             MenuItem vSteak = new MenuItem("🥩 Steak (1 portion)", new BigDecimal("25.99"), "Main", true, "valentine");
-            MenuItem vHeart = new MenuItem("💕 Heart decoration plate", new BigDecimal("0.00"), "Decoration", true, "valentine");
+            MenuItem vHeart = new MenuItem("💕 Heart decoration plate", new BigDecimal("1.00"), "Decoration", true, "valentine");
             MenuItem vNapkin = new MenuItem("🧻 Napkin", new BigDecimal("2.99"), "Etc", true, "valentine");
 
             menuItemRepository.saveAll(List.of(vWine, vSteak, vHeart, vNapkin));

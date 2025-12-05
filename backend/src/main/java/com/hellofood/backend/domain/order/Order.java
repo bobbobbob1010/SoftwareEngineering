@@ -35,6 +35,9 @@ public class Order {
     @Column(nullable = false)
     private String dinnerType;
 
+    @Column(nullable = false) 
+    private String servingStyle;
+
     public enum OrderStatus {
     PENDING("pending"), // 주문 접수: 고객이 주문을 완료한 초기 상태
     INPROGRESS("in-progress"), // 준비 중: 주방 스태프가 요리를 준비하는 중
@@ -87,7 +90,7 @@ public class Order {
     @JoinColumn(name = "customer_id", nullable = false)
     private Customer customer; //  Customer.java의 mappedBy="customer"와 일치
 
-    public Order(String orderDate, String deliveryAddress, Integer request, OrderStatus status, BigDecimal totalPrice, Customer customer, String dinnerType) {
+    public Order(String orderDate, String deliveryAddress, Integer request, OrderStatus status, BigDecimal totalPrice, Customer customer, String dinnerType, String servingStyle) {
         this.orderDate = orderDate;
         this.deliveryAddress = deliveryAddress;
         this.request = request;
@@ -95,6 +98,7 @@ public class Order {
         this.totalPrice = totalPrice;
         this.customer = customer;
         this.dinnerType = dinnerType;
+        this.servingStyle = servingStyle;
     }
 
     public void addOrderItem(OrderItem orderItem) {

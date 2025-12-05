@@ -17,6 +17,9 @@ function MenuDetailsScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  const [items, setItems] = useState([]);
+  const [addedItems, setAddedItems] = useState([]);
+
   // ============================================
   // 컴포넌트 로드 시 고객 정보 & 할인율 로드
   // ============================================
@@ -34,6 +37,32 @@ function MenuDetailsScreen() {
       setDiscountRate(tier.discountRate);
     }
   }, []);
+
+  useEffect(() => {
+    const fetchBaseMenuItems = async () => {
+      try {
+        // DB에서 해당 디너 타입의 "기본 구성품(Base Items)"을 조회
+        const response = await axios.get(`http://localhost:8080/api/menu-items`, {
+            params: { type: dinnerType, isBaseItem: true }
+        });
+
+        // 가져온 데이터를 state에 저장 (기본 수량 1개로 설정)
+        const mappedBaseItems = response.data.map(item => ({
+          ...item,
+          quantity: 1,      // 기본 수량
+          included: true,
+          addPrice: item.unitPrice
+        }));
+        setItems(mappedBaseItems);// 이제 items에 ID가 포함된 객체들이 담깁니다.
+      
+      } catch (err) {
+        console.error("Failed to load menu items", err);
+        // UI에는 하드코딩된 텍스트가 나오므로 에러가 나도 사용자 경험을 위해 조용히 넘어갈 수도 있음
+      }
+    };
+
+    fetchBaseMenuItems();
+  }, [dinnerType]);
 
   // ============================================
   // 할인율 계산 (로컬)
@@ -183,6 +212,7 @@ function MenuDetailsScreen() {
     setLoading(true);
     setError(null);
 
+    
     try {
       // 주문 데이터 구성
       const newOrder = {
@@ -203,10 +233,23 @@ function MenuDetailsScreen() {
         status: 'pending'
       };
 
+      // DTO 구성
+      const orderPayload = {
+          customerId: currentUser.id,
+          dinnerType: dinnerType,
+          deliveryAddress: currentUser.address,
+          quantity: displayQuantity,
+          items: [
+              ...items.filter(i => i.quantity > 0).map(i => ({ menuItemId: i.id, quantity: i.quantity * displayQuantity  })),
+              ...addedItems.map(i => ({ menuItemId: i.id, quantity: i.quantity * displayQuantity }))
+          ],
+          servingStyle : style
+      };
+
       // ✅ Backend API로 주문 전송
       const response = await axios.post(
         'http://localhost:8080/api/orders',
-        newOrder
+        orderPayload
       );
 
       // 성공 응답
@@ -554,7 +597,14 @@ function MenuDetailsScreen() {
 
         {/* 버튼들 */}
         <button
-          onClick={() => navigate(`/customize-order/${dinnerType}`)}
+          onClick={() => {
+            navigate(`/customize-order/${dinnerType}`, { 
+              state: { 
+                selectedStyle: style,     // 현재 선택된 style 값 ('simple', 'grand' 등)
+                currentQuantity: quantity // 필요하다면 수량도 같이 넘길 수 있음
+              } 
+            });
+          }}
           className="btn-primary"
           style={{ marginBottom: '15px' }}
         >

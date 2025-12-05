@@ -12,6 +12,7 @@ public class OrderRequestDto {
     
     // 주문한 모든 아이템 (기본 포함 + 추가된 것 모두 통합)
     private List<OrderItemDto> items;
+    private int quantity;
 
     @Data
     public static class OrderItemDto {
