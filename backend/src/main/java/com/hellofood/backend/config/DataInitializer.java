@@ -161,29 +161,31 @@ public class DataInitializer implements ApplicationRunner {
         // [기존 재료]
         // 판매가의 약 30%~40% 수준으로 원가(Cost) 책정
 
-        // 1. 메인/주류
-        Inventory beef = inventoryRepository.save(new Inventory("Beef", 25, 10, "kg", "good", new BigDecimal("9.00")));
-        Inventory champagne = inventoryRepository.save(new Inventory("Champagne", 12, 10, "bottles", "good", new BigDecimal("15.00")));
-        Inventory wine = inventoryRepository.save(new Inventory("Wine", 8, 10, "bottles", "low", new BigDecimal("10.00")));
-
-        // 2. 장식/기타 (무료 제공이더라도 원가는 발생)
-        Inventory heartPlate = inventoryRepository.save(new Inventory("Heart decoration plate", 100, 10, "ea", "good", new BigDecimal("0.50")));
-        Inventory napkin = inventoryRepository.save(new Inventory("Napkin", 500, 50, "ea", "good", new BigDecimal("0.50")));
-
-        // 3. 음료/사이드 재료
-        Inventory coffeeBeans = inventoryRepository.save(new Inventory("Coffee Beans", 50, 5, "cup", "good", new BigDecimal("0.80")));
-        Inventory saladMix = inventoryRepository.save(new Inventory("Salad Mix", 30, 5, "portion", "good", new BigDecimal("2.50")));
-
-        // 4. 조식/브런치 재료
-        Inventory eggs = inventoryRepository.save(new Inventory("eggs", 100, 20, "ea", "good", new BigDecimal("0.20")));
-        Inventory bacon = inventoryRepository.save(new Inventory("Bacon", 50, 10, "slices", "good", new BigDecimal("0.15")));
-        Inventory breadSlices = inventoryRepository.save(new Inventory("Bread Slices", 100, 20, "slices", "good", new BigDecimal("0.10")));
-        Inventory baguette = inventoryRepository.save(new Inventory("Baguette", 40, 5, "pieces", "good", new BigDecimal("0.20")));
+        
         
         
         if (inventoryRepository.count() == 0) {
             System.out.println("📦 재고 데이터 초기화 시작...");
 
+            // 1. 메인/주류
+            Inventory beef = inventoryRepository.save(new Inventory("Beef", 25, 10, "kg", "good", new BigDecimal("9.00")));
+            Inventory champagne = inventoryRepository.save(new Inventory("Champagne", 12, 10, "bottles", "good", new BigDecimal("15.00")));
+            Inventory wine = inventoryRepository.save(new Inventory("Wine", 8, 10, "bottles", "low", new BigDecimal("10.00")));
+
+            // 2. 장식/기타 (무료 제공이더라도 원가는 발생)
+            Inventory heartPlate = inventoryRepository.save(new Inventory("Heart decoration plate", 100, 10, "ea", "good", new BigDecimal("0.50")));
+            Inventory napkin = inventoryRepository.save(new Inventory("Napkin", 500, 50, "ea", "good", new BigDecimal("0.50")));
+
+            // 3. 음료/사이드 재료
+            Inventory coffeeBeans = inventoryRepository.save(new Inventory("Coffee Beans", 50, 5, "cup", "good", new BigDecimal("0.80")));
+            Inventory saladMix = inventoryRepository.save(new Inventory("Salad Mix", 30, 5, "portion", "good", new BigDecimal("2.50")));
+
+            // 4. 조식/브런치 재료
+            Inventory eggs = inventoryRepository.save(new Inventory("eggs", 100, 20, "ea", "good", new BigDecimal("0.20")));
+            Inventory bacon = inventoryRepository.save(new Inventory("Bacon", 50, 10, "slices", "good", new BigDecimal("0.15")));
+            Inventory breadSlices = inventoryRepository.save(new Inventory("Bread Slices", 100, 20, "slices", "good", new BigDecimal("0.10")));
+            Inventory baguette = inventoryRepository.save(new Inventory("Baguette", 40, 5, "pieces", "good", new BigDecimal("0.20")));
+            
             inventoryRepository.saveAll(List.of(
                 beef, champagne, wine,
                 heartPlate, napkin, coffeeBeans, saladMix, eggs, bacon, breadSlices, baguette
@@ -233,7 +235,7 @@ public class DataInitializer implements ApplicationRunner {
             // [Recipe - English]
             recipeRepository.saveAll(List.of(
                 new Recipe(eEgg, eggs, new BigDecimal("2")),           // Egg --> eggs x2
-                new Recipe(eBacon, bacon, new BigDecimal("3")),        // Bacon --> Bacon x3
+                new Recipe(eBacon, bacon, new BigDecimal("3")),        // Bacon --> Bacon slices x3
                 new Recipe(eBread, breadSlices, new BigDecimal("2")),  // Bread --> Bread Slices x2
                 new Recipe(eSteak, beef, new BigDecimal("1"))          // Steak --> Beef x1
             ));
@@ -250,7 +252,7 @@ public class DataInitializer implements ApplicationRunner {
             // [Recipe - Champagne]
             recipeRepository.saveAll(List.of(
                 new Recipe(cChampagne, champagne, new BigDecimal("1")), // Champagne --> Champagne x1
-                new Recipe(cBaguette, baguette, new BigDecimal("1")),   // Baguette --> Baguette x1 (재고 단위를 통으로 가정)
+                new Recipe(cBaguette, baguette, new BigDecimal("4")),   // Baguette --> Baguette x4 (4 pieces)
                 new Recipe(cCoffee, coffeeBeans, new BigDecimal("1")),  // Coffee --> Coffee Beans x1
                 new Recipe(cWine, wine, new BigDecimal("1")),           // Wine --> Wine x1
                 new Recipe(cSteak, beef, new BigDecimal("1"))           // Steak --> Beef x1
@@ -266,16 +268,32 @@ public class DataInitializer implements ApplicationRunner {
             //     new MenuItem("🥩 Extra Steak", new BigDecimal("25.99"), "Main", false, null),
             //     new MenuItem("🍫 Dessert (Chocolate)", new BigDecimal("12.99"), "Dessert", false, null)
             // ));
+
+            //
+            MenuItem ChampagneAddon = new MenuItem("🍾 Extra Champagne (1 bottle)", new BigDecimal("45.99"), "Drinks", false, null);
+            MenuItem BaguetteAddon = new MenuItem("🥖 Extra Baguette (2 pieces)", new BigDecimal("5.99"), "Bread", false, null);
+            MenuItem CoffeeAddon = new MenuItem("☕ Extra Coffee (1 cup)", new BigDecimal("3.99"), "Drinks", false, null);
+            MenuItem WineAddon = menuItemRepository.save(new MenuItem("🍷 Extra Wine (1 glass)", new BigDecimal("12.99"), "Drinks", false, null));
+            MenuItem SteakAddon = menuItemRepository.save(new MenuItem("🥩 Extra Steak (1 portion)", new BigDecimal("25.99"), "Main", false, null));
+            MenuItem SaladAddon = menuItemRepository.save(new MenuItem("🥗 Extra Salad (1 portion)", new BigDecimal("8.99"), "Sides", false, null));
+            MenuItem EggAddon = menuItemRepository.save(new MenuItem("🍳 Extra Scrambled Egg", new BigDecimal("5.99"), "Sides", false, null));
+            MenuItem BaconAddon = menuItemRepository.save(new MenuItem("🥓 Extra Bacon (3 slices)", new BigDecimal("5.99"), "Sides", false, null));
+            MenuItem BreadAddon = menuItemRepository.save(new MenuItem("🍞 Extra Bread (2 slices)", new BigDecimal("3.99"), "Bread", false, null));
+
             menuItemRepository.saveAll(List.of(
-                new MenuItem("🍾 Extra Champagne (1 bottle)", new BigDecimal("45.99"), "Drinks", false, null),
-                new MenuItem("🥖 Extra Baguette (2 pieces)", new BigDecimal("5.99"), "Bread", false, null),
-                new MenuItem("☕ Extra Coffee (1 cup)", new BigDecimal("3.99"), "Drinks", false, null),
-                new MenuItem("🍷 Extra Wine (1 glass)", new BigDecimal("12.99"), "Drinks", false, null),
-                new MenuItem("🥩 Extra Steak (1 portion)", new BigDecimal("25.99"), "Main", false, null),
-                new MenuItem("🥗 Extra Salad (1 portion)", new BigDecimal("8.99"), "Sides", false, null),
-                new MenuItem("🍳 Extra Scrambled Egg", new BigDecimal("5.99"), "Sides", false, null),
-                new MenuItem("🥓 Extra Bacon (3 slices)", new BigDecimal("5.99"), "Sides", false, null),
-                new MenuItem("🍞 Extra Bread (2 slices)", new BigDecimal("3.99"), "Bread", false, null)
+                ChampagneAddon, BaguetteAddon, CoffeeAddon, WineAddon, SteakAddon, SaladAddon, EggAddon, BaconAddon, BreadAddon
+            ));
+            // [Recipe - extra Add-ons]
+            recipeRepository.saveAll(List.of(
+                new Recipe(ChampagneAddon, champagne, new BigDecimal("1")),
+                new Recipe(BaguetteAddon, baguette, new BigDecimal("2")),   // 2 pieces
+                new Recipe(CoffeeAddon, coffeeBeans, new BigDecimal("1")),
+                new Recipe(WineAddon, wine, new BigDecimal("1")),
+                new Recipe(SteakAddon, beef, new BigDecimal("1")),
+                new Recipe(SaladAddon, saladMix, new BigDecimal("1")),
+                new Recipe(EggAddon, eggs, new BigDecimal("2")),       // 계란 메뉴는 2알 소모
+                new Recipe(BaconAddon, bacon, new BigDecimal("3")),    // 베이컨은 3장 소모
+                new Recipe(BreadAddon, breadSlices, new BigDecimal("2")) // 빵은 2조각 소모
             ));
 
             // inventoryRepository.saveAll(List.of(

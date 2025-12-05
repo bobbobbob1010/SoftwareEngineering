@@ -36,11 +36,11 @@ public class Order {
     private String dinnerType;
 
     public enum OrderStatus {
-    pending("pending"), // 주문 접수: 고객이 주문을 완료한 초기 상태
-    inProgress("in-progress"), // 준비 중: 주방 스태프가 요리를 준비하는 중
-    ready("ready"), // 준비완료: 요리 준비완료+라이더가 음식을 픽업하여 배달하는 중
-    delivered("delivered"), // 배달 완료: 고객에게 최종 전달됨
-    cancelled("cancelled"); // 주문 취소: 고객 또는 시스템에 의해 취소됨
+    PENDING("pending"), // 주문 접수: 고객이 주문을 완료한 초기 상태
+    INPROGRESS("in-progress"), // 준비 중: 주방 스태프가 요리를 준비하는 중
+    READY("ready"), // 준비완료: 요리 준비완료+라이더가 음식을 픽업하여 배달하는 중
+    DELIVERED("delivered"), // 배달 완료: 고객에게 최종 전달됨
+    CANCELLED("cancelled"); // 주문 취소: 고객 또는 시스템에 의해 취소됨
     
     // 2. 문자열을 저장할 필드 선언
     private final String label;

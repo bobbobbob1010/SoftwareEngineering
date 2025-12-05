@@ -1,15 +1,18 @@
 package com.hellofood.backend.service;
 
 import com.hellofood.backend.domain.inventory.Inventory;
+import com.hellofood.backend.domain.order.MenuItem;
+import com.hellofood.backend.domain.order.Recipe;
 import com.hellofood.backend.dto.inventory.InventoryRequestDto;
 import com.hellofood.backend.dto.inventory.InventoryResponseDto;
 import com.hellofood.backend.repository.InventoryRepository;
-
+import com.hellofood.backend.repository.RecipeRepository;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -19,7 +22,7 @@ import java.util.stream.Collectors;
 public class InventoryService {
 
     private final InventoryRepository inventoryRepository;
-
+    private final RecipeRepository recipeRepository;
     private final UsageProvider usageProvider;
 
     // 1. 전체 재고 조회
@@ -101,6 +104,40 @@ public class InventoryService {
             inventory.setStatus("Low");      // 부족
         } else {
             inventory.setStatus("Good");     // 양호
+        }
+    }
+
+    // 주문시 재고 줄어들게
+    @Transactional
+    public void deductStock(MenuItem menuItem, int quantity) {
+        // 1. 해당 메뉴의 레시피 조회 (어떤 재료를 쓰는지)
+        List<Recipe> recipes = recipeRepository.findByMenuItem(menuItem);
+
+        if (recipes.isEmpty()) {
+            // 레시피가 없는 메뉴(예: 단순 서비스 등)라면 차감할 재료 없음
+            return;
+        }
+
+        // 2. 레시피에 정의된 재료별로 수량 차감
+        for (Recipe recipe : recipes) {
+            Inventory inventory = recipe.getInventory();
+            
+            // 필요량 = 레시피당 소모량 * 주문 수량
+            BigDecimal requiredQty = recipe.getRequiredQuantity().multiply(BigDecimal.valueOf(quantity));
+
+            int currentStock = inventory.getQuantityAvailable();
+            int deductAmount = requiredQty.intValue(); // 정수로 변환 (단위에 따라 조정 필요할 수 있음)
+
+            if (currentStock < deductAmount) {
+                throw new IllegalStateException("재고 부족: " + inventory.getItemName() 
+                        + " (남은 수량: " + currentStock + ", 필요 수량: " + deductAmount + ")");
+            }
+
+            // 차감 및 업데이트
+            inventory.setQuantityAvailable(currentStock - deductAmount);
+            
+            // 상태 업데이트 (Low, Critical 등)
+            updateStatusBasedOnQuantity(inventory);
         }
     }
 }

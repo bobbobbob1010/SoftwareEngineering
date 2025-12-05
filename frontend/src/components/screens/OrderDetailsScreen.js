@@ -81,16 +81,37 @@ function OrderDetailsScreen() {
 
 
   const getStatusColor = (status) => {
-    switch (status) {
-      case 'Delivered':
+    const normalizedStatus = status?.toLowerCase();
+    console.log(normalizedStatus);
+    switch (normalizedStatus) {
+      case 'delivered':
         return '#4CAF50';
       case 'In Progress':
+      case 'in-progress':
+      case 'inprogress':
         return '#FFC107';
-      case 'Pending':
+      case 'ready':
+        return '#2196F3'; 
+      case 'pending':
         return '#FF9800';
+      case 'cancelled':
+        return '#F44336'; 
       default:
         return '#9E9E9E';
     }
+  };
+
+  const getStatusText = (status) => {
+    const normalizedStatus = status?.toLowerCase();
+    const statusMap = {
+      'pending': 'Pending',
+      'in-progress': 'In Progress',
+      'inprogress': 'In Progress',
+      'ready': 'Ready',
+      'delivered': 'Delivered',
+      'cancelled': 'Cancelled'
+    };
+    return statusMap[normalizedStatus] || status;
   };
 
   // 백엔드 날짜 포맷팅 (예: "2025-11-27 19:00:00")
@@ -178,7 +199,7 @@ function OrderDetailsScreen() {
               color: order.status === 'Delivered' ? '#FFFFFF' : '#000000',
               fontWeight: 'bold'
             }}>
-              {order.status}
+              {getStatusText(order.status)}
             </span>
           </div>
           <p style={{

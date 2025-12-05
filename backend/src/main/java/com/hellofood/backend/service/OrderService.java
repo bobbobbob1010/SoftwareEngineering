@@ -10,6 +10,8 @@ import com.hellofood.backend.dto.order.OrderListResponseDto;
 import com.hellofood.backend.repository.MenuItemRepository;
 import com.hellofood.backend.repository.OrderRepository;
 import com.hellofood.backend.repository.CustomerRepository;
+import com.hellofood.backend.repository.InventoryRepository;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +31,7 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final CustomerRepository customerRepository;
     private final MenuItemRepository menuItemRepository;
+    private final InventoryService inventoryService;
 
     // 디너 세트별 기본 가격 (DB에 DinnerSet 엔티티가 따로 없다면 상수로 관리)
     private static final Map<String, BigDecimal> DINNER_BASE_PRICES = Map.of(
@@ -54,7 +57,7 @@ public class OrderService {
             LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")),
             request.getDeliveryAddress(),
             0, // request count (임시)
-            Order.OrderStatus.pending, // 초기 상태
+            Order.OrderStatus.PENDING, // 초기 상태
             BigDecimal.ZERO, // 나중에 업데이트
             (Customer) user, // 캐스팅 필요 (설계에 따라 다름)
             request.getDinnerType()
@@ -66,6 +69,9 @@ public class OrderService {
 
             MenuItem menuItem = menuItemRepository.findById(itemDto.getMenuItemId())
             .orElseThrow(() -> new IllegalArgumentException("Invalid Menu Item ID"));
+
+            // 해당 메뉴를 만들기 위해 필요한 재료들을 Inventory에서 차감합니다.
+            inventoryService.deductStock(menuItem, itemDto.getQuantity());
 
             // 가격 계산 (단가 * 수량)
             

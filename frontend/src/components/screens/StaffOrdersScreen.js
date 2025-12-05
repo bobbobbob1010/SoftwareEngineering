@@ -101,19 +101,20 @@ function StaffOrdersScreen() {
   const getStatusColor = (status) => {
     const normalizedStatus = status?.toLowerCase();
     switch (normalizedStatus) {
-      case 'pending':
-        return '#FF9800';
+      case 'delivered':
+        return '#4CAF50';
+      case 'In Progress':
       case 'in-progress':
       case 'inprogress':
-        return '#2196F3';
-      case 'ready':
-        return '#4CAF50';
-      case 'delivered':
-        return '#9E9E9E';
-      case 'cancelled':
-        return '#FF5252';
-      default:
         return '#FFC107';
+      case 'ready':
+        return '#2196F3'; 
+      case 'pending':
+        return '#FF9800';
+      case 'cancelled':
+        return '#F44336'; 
+      default:
+        return '#9E9E9E';
     }
   };
 
@@ -314,7 +315,7 @@ function StaffOrdersScreen() {
               overflowX: 'auto',
               paddingBottom: '10px'
             }}>
-              {['all', 'pending', 'in-progress', 'ready', 'delivered'].map((status) => (
+              {['all', 'pending', 'inprogress', 'ready', 'delivered'].map((status) => (
                 <button
                   key={status}
                   onClick={() => setSelectedStatus(status)}
@@ -369,9 +370,10 @@ function StaffOrdersScreen() {
                       padding: '4px 10px',
                       fontSize: '11px',
                       fontWeight: 'bold',
-                      color: (order.status?.toLowerCase() === 'ready' || 
+                      color: (order.status?.toLowerCase() === 'pending' || 
                                order.status?.toLowerCase() === 'in-progress' ||
-                               order.status?.toLowerCase() === 'inprogress')
+                               order.status?.toLowerCase() === 'inprogress' 
+                               )
                         ? '#000000' 
                         : '#FFFFFF'
                     }}>
