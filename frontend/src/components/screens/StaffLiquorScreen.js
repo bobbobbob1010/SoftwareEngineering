@@ -22,7 +22,8 @@ function StaffLiquorScreen() {
           unit: item.unit,
           min: item.minQuantity,
           status: item.status.toLowerCase(),
-          supplier: 'Next-door Liquor Shop' // 설명용 텍스트 (원하면 바꿔도 됨)
+          supplier: 'Next-door Liquor Shop', // 설명용 텍스트 (원하면 바꿔도 됨)
+          price: item.cost
         }));
 
         // Wine / Champagne만 필터
@@ -60,7 +61,22 @@ function StaffLiquorScreen() {
   const handleOrderMore = (id) => {
     const target = liquors.find(l => l.id === id);
     if (!target) return;
-    alert('Order placed for ' + target.name);
+
+    const input = window.prompt(`How many bottles of ${target.name} did you buy?`, "1");
+    
+    // 취소 누르거나 빈 값일 경우 중단
+    if (input === null || input.trim() === "") return;
+
+    const addAmount = parseInt(input, 10); //input을 10진수로 해석해서 Int형으로 반환
+
+    // 숫자가 아니거나 0보다 작으면 경고
+    if (isNaN(addAmount) || addAmount <= 0) {
+      alert("Please enter a valid number.");
+      return;
+    }
+    
+    handleUpdateQuantity(target.id, Math.max(0, target.quantity + addAmount));
+    alert(`Successfully Ordered ${addAmount} bottles for ${target.name}`);
   };
 
   // 통계 계산
@@ -72,8 +88,9 @@ const wineCount = liquors
   .filter(l => l.name === 'Wine')
   .reduce((sum, item) => sum + item.quantity, 0);
 
+const totalValue = liquors.reduce((sum, item) => sum + (item.quantity * item.price), 0);
 // DB에 price 없음 → 일단 totalValue = 0
-const totalValue = 0;
+// const totalValue = 0;
 
 
   /* 하드코팅 다 삭제
@@ -136,7 +153,7 @@ const totalValue = 0;
   const handleOrderMore = (id) => {
     alert('Order placed for ' + liquors.find(l => l.id === id).name);
   };
-
+  
   const totalValue = liquors.reduce((sum, item) => sum + (item.quantity * item.price), 0);
   const champagneCount = liquors.filter(l => l.type === 'Champagne').reduce((sum, item) => sum + item.quantity, 0);
   const wineCount = liquors.filter(l => l.type === 'Wine').reduce((sum, item) => sum + item.quantity, 0);

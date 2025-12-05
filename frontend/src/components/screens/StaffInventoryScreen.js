@@ -9,8 +9,9 @@ function StaffInventoryScreen() {
   const [inventory, setInventory] = useState([]);
 
   //추가: 4가지 메뉴의 기본 재료들만 정의 (liquor는 나중에 따로 관리)
-  const baseItems = ['Steak', 'Coffee', 'Salad', 'Scrambled Egg', 'Bacon', 'Bread', 'Heart Decoration', 'Napkin', 'Baguette (4)'];
-
+  const baseItems2_origin = ['Steak', 'Coffee', 'Salad', 'Scrambled Egg', 'Bacon', 'Bread', 'Heart Decoration', 'Napkin', 'Baguette (4)'];
+  const baseItems = ['Beef',"Chicken", "Fish","Salmon","Vegetables",/*"Champagne","Wine",*/"Caviar","Heart decoration plate","Napkin","Coffee Beans","Salad Mix","eggs","Bacon","Bread Slices",'Baguette']
+  
   useEffect(() => {
     axios.get('http://localhost:8080/api/inventories')
       .then(response => {
@@ -24,7 +25,8 @@ function StaffInventoryScreen() {
           quantity: item.quantityAvailable, // 백엔드 quantityAvailable -> 프론트 quantity
           unit: item.unit,
           min: item.minQuantity,      // 백엔드 minQuantity -> 프론트 min
-          status: item.status.toLowerCase() // 대문자(Good) -> 소문자(good)
+          status: item.status.toLowerCase(), // 대문자(Good) -> 소문자(good)
+          usedInMenus : item.usedInMenus
         }));
         
         // baseItems에 있는 것들만
@@ -189,13 +191,38 @@ function StaffInventoryScreen() {
               alignItems: 'center',
               marginBottom: '10px'
             }}>
-              <p style={{
-                fontSize: '16px',
-                fontWeight: 'bold',
-                color: '#FFFFFF'
-              }}>
-                {item.name}
-              </p>
+              {/* 왼쪽: 상품명 + 메뉴 배지 */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <span style={{
+                  fontSize: '16px',
+                  fontWeight: 'bold',
+                  color: '#FFFFFF'
+                }}>
+                  {item.name}
+                </span>
+
+                {/* 💡 여기에 배지 모양 추가됨 */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                  {item.usedInMenus && item.usedInMenus.length > 0 ? (
+                    item.usedInMenus.map((menu, idx) => (
+                      <span key={idx} style={{
+                        backgroundColor: '#3a3a3a', // 배경색 (카드보다 약간 밝게)
+                        color: '#b0b0b0',           // 글자색
+                        fontSize: '11px',
+                        padding: '3px 8px',
+                        borderRadius: '12px',       // 둥근 알약 모양
+                        border: '1px solid #444'    // 얇은 테두리 (선택사항)
+                      }}>
+                        {menu}
+                      </span>
+                    ))
+                  ) : (
+                    <span style={{ fontSize: '11px', color: '#555' }}>미사용</span>
+                  )}
+                </div>
+              </div>
+
+              
               <div style={{
                 backgroundColor: getStatusColor(item.status),
                 borderRadius: '6px',

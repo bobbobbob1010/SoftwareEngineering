@@ -1,5 +1,7 @@
 package com.hellofood.backend.domain.inventory;
 
+import java.math.BigDecimal;
+
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -20,15 +22,17 @@ public class Inventory {
     private String unit; // -> unit
     private int minQuantity; // -> min
     private String status ; // -> status Good Low Critical
+    private BigDecimal cost; // -> 원가 field
 
     public Inventory() {} //JPA 기본 생성자
 
-    public Inventory(String itemName, int quantityAvailable, int minQuantity, String unit, String status) {
+    public Inventory(String itemName, int quantityAvailable, int minQuantity, String unit, String status, BigDecimal cost) {
         this.itemName = itemName;
         this.quantityAvailable = quantityAvailable;
         this.minQuantity = minQuantity;
         this.unit = unit;
         this.status = status;
+        this.cost = cost;
     }
     
 }

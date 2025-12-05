@@ -4,6 +4,8 @@ import com.hellofood.backend.domain.inventory.Inventory;
 import com.hellofood.backend.dto.inventory.InventoryRequestDto;
 import com.hellofood.backend.dto.inventory.InventoryResponseDto;
 import com.hellofood.backend.repository.InventoryRepository;
+
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,10 +20,15 @@ public class InventoryService {
 
     private final InventoryRepository inventoryRepository;
 
+    private final UsageProvider usageProvider;
+
     // 1. 전체 재고 조회
     public List<InventoryResponseDto> getAllInventories() {
         return inventoryRepository.findAll().stream()
-                .map(InventoryResponseDto::new)
+                .map(inventory -> {
+                    List<String> menuNames = usageProvider.getMenuNamesByInventory(inventory);
+                    return new InventoryResponseDto(inventory, menuNames);
+                })
                 .collect(Collectors.toList());
     }
 
@@ -29,7 +36,10 @@ public class InventoryService {
     public InventoryResponseDto getInventory(Long id) {
         Inventory inventory = inventoryRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("재고를 찾을 수 없습니다. id=" + id));
-        return new InventoryResponseDto(inventory);
+
+        List<String> menuNames = usageProvider.getMenuNamesByInventory(inventory);
+        
+        return new InventoryResponseDto(inventory, menuNames);
     }
 
     // 3. 재고 등록 (Create)
