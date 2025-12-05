@@ -62,6 +62,11 @@ function StaffLoginScreen({ setSelectedRole }) {
           placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          onKeyPress={(e) => {
+            if (e.key === 'Enter') {
+              handleLogin();
+            }
+          }}          
           className="input-field"
           style={{ marginBottom: '15px' }}
         />
@@ -71,6 +76,11 @@ function StaffLoginScreen({ setSelectedRole }) {
           placeholder="Password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+          onKeyPress={(e) => {
+            if (e.key === 'Enter') {
+              handleLogin();
+            }
+          }}
           className="input-field"
           style={{ marginBottom: '30px' }}
         />

@@ -161,6 +161,7 @@ function SignupScreen() {
         <label style={{ fontSize: '12px', color: '#b0b0b0', display: 'block', marginBottom: '5px' }}>
           Full Name
         </label>
+
         <input
           type="text"
           name="name"
@@ -257,6 +258,11 @@ function SignupScreen() {
               type="checkbox"
               checked={agreed}
               onChange={(e) => setAgreed(e.target.checked)}
+              onKeyPress={(e) => {
+                 if (e.key === 'Enter') {
+                  handleSignup();
+                }
+              }}
               style={{
                 width: '18px',
                 height: '18px',
