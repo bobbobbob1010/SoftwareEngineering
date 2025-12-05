@@ -4,6 +4,8 @@ import com.hellofood.backend.domain.order.Order;
 import com.hellofood.backend.domain.order.Order.OrderStatus;
 import com.hellofood.backend.domain.user.Customer;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
@@ -26,6 +28,14 @@ public interface OrderRepository extends JpaRepository<Order, Long> { //인터�
 
     // 상태(WAITING, COOKING 등)로 주문 목록을 찾는 메서드 (JPA가 알아서 구현해줌)
     List<Order> findByStatus(OrderStatus status);
+
+    // 💡 모든 주문 조회 시 Logs와 Customer를 Fetch Join
+    @Query("SELECT o FROM Order o LEFT JOIN FETCH o.processLogs LEFT JOIN FETCH o.customer")
+    List<Order> findAllWithLogs();
+
+    // 💡 상태별 조회 시 Logs와 Customer를 Fetch Join
+    @Query("SELECT o FROM Order o LEFT JOIN FETCH o.processLogs LEFT JOIN FETCH o.customer WHERE o.status = :status")
+    List<Order> findByStatusWithLogs(@Param("status") OrderStatus status);
 
     List<Order> findAll();
 }

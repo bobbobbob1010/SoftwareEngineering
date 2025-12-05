@@ -1,6 +1,7 @@
 package com.hellofood.backend.dto.order;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -32,8 +33,11 @@ public class OrderResponseDto {
     private String driverName = "John Doe";
     private String driverPhone = "+1-555-0123";
     private String deliveryTime = "30-45 minutes";
+    
+    private Long kitchenStaffId = null; 
+    private LocalDateTime readyTime = null; // LocalDateTime 그대로 프론트엔드로 전달
 
-
+    //order 객체를 받아 DTO만드는과정
     public OrderResponseDto(Order order) {
         this.id = order.getOrderId();
         this.dinnerName = order.getDinnerType();
@@ -65,6 +69,16 @@ public class OrderResponseDto {
                 .collect(Collectors.toList());
     }
 
+
+    public OrderResponseDto(Order order, Long kitchenStaffId, LocalDateTime readyTime) {
+        // 기존 생성자를 호출하여 Order 엔티티의 기본 정보를 모두 매핑합니다.
+        this(order); 
+
+        // Service에서 계산/추출된 값을 DTO 필드에 직접 대입하여 덮어씁니다.
+        this.kitchenStaffId = kitchenStaffId; 
+        this.readyTime = readyTime;
+    }
+    
     // 내부 클래스로 아이템 DTO 정의
     @Data
     public static class ItemDto {

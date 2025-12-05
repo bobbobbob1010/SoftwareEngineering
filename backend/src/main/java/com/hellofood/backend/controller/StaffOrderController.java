@@ -32,6 +32,8 @@ public class StaffOrderController {
             @RequestBody Map<String, String> request
     ) {
         String statusStr = request.get("status");
+        Long staffId = Long.parseLong(request.get("staffId")); // 예시
+        String staffRole = request.get("staffRole"); // 예시 (KitchenStaff, DeliveryStaff)
         OrderStatus newStatus;
         try {
         newStatus = OrderStatus.valueOf(statusStr.toUpperCase());
@@ -44,7 +46,7 @@ public class StaffOrderController {
             throw new IllegalArgumentException("잘못된 상태값입니다: " + statusStr);
         }
 
-        staffOrderService.updateStatus(orderId, newStatus);
+        staffOrderService.updateStatusAndAudit(orderId, newStatus,staffId,staffRole);
         return ResponseEntity.ok().build();
     }
 

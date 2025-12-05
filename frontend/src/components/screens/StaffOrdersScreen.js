@@ -62,6 +62,10 @@ function StaffOrdersScreen() {
   // API: 주문 상태 업데이트
   // ============================================
   const updateOrderStatus = async (orderId, newStatus) => {
+    const currentStaff = JSON.parse(localStorage.getItem('currentUser'));
+    const staffId = currentStaff.id;
+    const staffRole = currentStaff.userType;
+    
     try {
       setUpdatingId(orderId);
       setError(null);
@@ -69,7 +73,11 @@ function StaffOrdersScreen() {
       // ✅ Backend에 상태 업데이트 요청
       await axios.patch(
         `http://localhost:8080/api/staff-orders/${orderId}/status`,
-        { status: newStatus }
+        { 
+          status: newStatus,
+          staffId: staffId,
+          staffRole: staffRole
+         }
       );
       
       // 업데이트 성공 후 주문 목록 다시 조회
@@ -408,6 +416,18 @@ function StaffOrdersScreen() {
                   }}>
                     📍 {order.deliveryAddress || 'TBD'}
                   </p>
+                  
+                  {/* 담당 직원 정보 */}
+                  {order.kitchenStaffId && (
+                      <p style={{ fontSize: '12px', color: '#b0b0b0' }}>
+                          👨‍🍳 Kitchen Staff ID: {order.kitchenStaffId}
+                      </p>
+                  )}
+                  {order.readyTime && (
+                      <p style={{ fontSize: '12px', color: '#b0b0b0' }}>
+                          🕒 Ready Time: {new Date(order.readyTime).toLocaleTimeString()}
+                      </p>
+                  )}
 
                   {/* 가격과 시간 */}
                   <div style={{

@@ -38,6 +38,7 @@ public class Order {
     @Column(nullable = false) 
     private String servingStyle;
 
+    // R
     public enum OrderStatus {
     PENDING("pending"), // 주문 접수: 고객이 주문을 완료한 초기 상태
     INPROGRESS("in-progress"), // 준비 중: 주방 스태프가 요리를 준비하는 중
@@ -90,6 +91,10 @@ public class Order {
     @JoinColumn(name = "customer_id", nullable = false)
     private Customer customer; //  Customer.java의 mappedBy="customer"와 일치
 
+    //OrderProcessLog 와의 관계 설정(Order 추적전문)
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL)
+    private List<OrderProcessLog> processLogs = new ArrayList<>();
+    
     public Order(String orderDate, String deliveryAddress, Integer request, OrderStatus status, BigDecimal totalPrice, Customer customer, String dinnerType, String servingStyle) {
         this.orderDate = orderDate;
         this.deliveryAddress = deliveryAddress;
