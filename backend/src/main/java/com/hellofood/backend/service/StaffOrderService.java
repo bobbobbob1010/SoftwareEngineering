@@ -11,8 +11,6 @@ import com.hellofood.backend.repository.OrderRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 
-import org.springframework.security.access.AccessDeniedException;
-
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
@@ -25,17 +23,20 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 @RequiredArgsConstructor
 public class StaffOrderService {
-    
+
     private final OrderRepository orderRepository;
     private final OrderProcessLogRepository orderProcessLogRepository;
+    private final com.hellofood.backend.repository.StaffRepository staffRepository;
+    private final AccessControlService accessControlService;
 
-    //OrderPcoressLog에서 해당 주문의 최신 상태(담당직원, 시각)를 찾는 메소드
+    // OrderPcoressLog에서 해당 주문의 최신 상태(담당직원, 시각)를 찾는 메소드
     private OrderProcessLog findLatestLogByStatus(List<OrderProcessLog> logs, OrderStatus status) {
-        if (logs == null || logs.isEmpty()) return null;
+        if (logs == null || logs.isEmpty())
+            return null;
         return logs.stream()
-            .filter(log -> log.getStatus() == status)
-            .max(Comparator.comparing(OrderProcessLog::getProcessTime))
-            .orElse(null);
+                .filter(log -> log.getStatus() == status)
+                .max(Comparator.comparing(OrderProcessLog::getProcessTime))
+                .orElse(null);
     }
 
     // Status 기반 주문 조회
@@ -53,10 +54,13 @@ public class StaffOrderService {
         return orders.stream()
                 .map(order -> {
                     OrderProcessLog readyLog = findLatestLogByStatus(order.getProcessLogs(), OrderStatus.READY);
-                    OrderProcessLog inProgressLog = findLatestLogByStatus(order.getProcessLogs(), OrderStatus.INPROGRESS);
+                    OrderProcessLog inProgressLog = findLatestLogByStatus(order.getProcessLogs(),
+                            OrderStatus.INPROGRESS);
+                    OrderProcessLog deliveredLog = findLatestLogByStatus(order.getProcessLogs(), OrderStatus.DELIVERED);
 
                     Long staffId = null;
                     LocalDateTime readyTime = null;
+                    String staffName = null;
 
                     if (readyLog != null) {
                         staffId = readyLog.getStaffId();
@@ -65,13 +69,36 @@ public class StaffOrderService {
                         staffId = inProgressLog.getStaffId();
                     }
 
-                    // 3. 추출된 정보를 DTO 생성자로 전달 (아래 2번 DTO 수정 필요)
-                    return new OrderResponseDto(order, staffId, readyTime); 
+                    if (staffId != null) {
+                        staffName = staffRepository.findById(staffId)
+                                .map(com.hellofood.backend.domain.user.User::getName)
+                                .orElse("Unknown Staff");
+                    }
+
+                    // [Added] Delivery Staff Info Logic
+                    Long deliveryStaffId = null;
+                    LocalDateTime actualDeliveryTime = null;
+                    String deliveryStaffName = null;
+
+                    if (deliveredLog != null) {
+                        deliveryStaffId = deliveredLog.getStaffId();
+                        actualDeliveryTime = deliveredLog.getProcessTime();
+
+                        if (deliveryStaffId != null) {
+                            deliveryStaffName = staffRepository.findById(deliveryStaffId)
+                                    .map(com.hellofood.backend.domain.user.User::getName)
+                                    .orElse("Unknown Delivery Staff");
+                        }
+                    }
+
+                    // 3. 추출된 정보를 DTO 생성자로 전달
+                    return new OrderResponseDto(order, staffId, readyTime, staffName, deliveryStaffId,
+                            actualDeliveryTime, deliveryStaffName);
                 })
                 .collect(Collectors.toList());
     }
-    
-    //  주문 상태 업데이트
+
+    // 주문 상태 업데이트
     public void updateStatus(Long orderId, OrderStatus newStatus) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new IllegalArgumentException("주문 없음"));
@@ -80,38 +107,35 @@ public class StaffOrderService {
         // if (order.getStatus() == OrderStatus.COMPLETED) throw ...
 
         order.setStatus(newStatus);
-        
+
         // (확장 기능) 만약 상태가 '배달중'으로 바뀌면 고객에게 알림(SMS/Push) 보내기 로직 추가
     }
 
     // 새로 추가한 이력 관리 함수
     public void updateStatusAndAudit(Long orderId, OrderStatus newStatus, Long staffId, String staffRole) {
-        
-        Order order = orderRepository.findById(orderId)
-            .orElseThrow(() -> new EntityNotFoundException("Order not found."));
 
-        // 1. 역할 검증 (RBAC)
-        if (newStatus == OrderStatus.INPROGRESS || newStatus == OrderStatus.READY) {
-            if (!"kitchen_staff".equals(staffRole)) {
-                throw new AccessDeniedException("요리 준비는 주방 직원만 처리할 수 있습니다.");
-            }
-        } else if (newStatus == OrderStatus.DELIVERED) {
-            if (!"delivery_staff".equals(staffRole)) {
-                throw new AccessDeniedException("배달 완료는 배달 직원만 처리할 수 있습니다.");
-            }
-        }
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new EntityNotFoundException("Order not found."));
+
+        // 1. 직원 엔티티 조회 (다형성 활용을 위해 실제 객체 필요)
+        com.hellofood.backend.domain.user.Staff staff = staffRepository.findById(staffId)
+                .map(user -> (com.hellofood.backend.domain.user.Staff) user) // Staff로 캐스팅
+                .orElseThrow(() -> new EntityNotFoundException("Staff not found with id: " + staffId));
+
+        // 2. 역할 검증 (RBAC) - AccessControlService 위임
+        // 이제 문자열(role)이 아니라 객체(staff)를 넘깁니다.
+        accessControlService.verifyStaffAccess(newStatus, staff);
 
         order.setStatus(newStatus);
         orderRepository.save(order);
-        
+
         OrderProcessLog log = new OrderProcessLog(
-            order, 
-            newStatus, 
-            staffId, 
-            LocalDateTime.now(), // 현재 시각 기록
-            staffRole
-        );
-        
+                order,
+                newStatus,
+                staffId,
+                LocalDateTime.now(), // 현재 시각 기록
+                staffRole);
+
         // 💡 로그 엔티티 저장
         orderProcessLogRepository.save(log);
     }

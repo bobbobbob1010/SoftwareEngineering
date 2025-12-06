@@ -1,0 +1,223 @@
+@startuml
+title Register (회원가입)
+actor Customer
+participant AuthController
+participant AuthenticationService
+participant CustomerRepository
+participant Database
+
+Customer -> AuthController: POST /api/auth/register
+AuthController -> AuthenticationService: registerCustomer(request)
+AuthenticationService -> CustomerRepository: findByEmail(email)
+CustomerRepository --> AuthenticationService: empty
+AuthenticationService -> AuthenticationService: encryptPassword()
+AuthenticationService -> CustomerRepository: save(Customer)
+CustomerRepository -> Database: insert
+Database --> CustomerRepository: ID
+CustomerRepository --> AuthenticationService: Customer Entity
+AuthenticationService --> AuthController: customerId
+AuthController --> Customer: 200 OK
+@enduml
+
+@startuml
+title Login (로그인)
+actor User
+participant AuthController
+participant AuthenticationService
+participant CustomerRepository
+participant StaffRepository
+
+User -> AuthController: POST /api/auth/login
+AuthController -> AuthenticationService: authenticate(email, pw)
+alt Customer Login
+    AuthenticationService -> CustomerRepository: findByEmail
+    CustomerRepository --> AuthenticationService: Customer
+else Staff Login
+    AuthenticationService -> StaffRepository: findByEmail
+    StaffRepository --> AuthenticationService: Staff
+end
+AuthenticationService -> AuthenticationService: verifyPassword()
+AuthenticationService --> AuthController: User Entity
+AuthController --> User: 200 OK (User Info)
+@enduml
+
+@startuml
+title View Menu (메뉴 조회)
+actor Customer
+participant MenuController
+participant MenuService
+participant MenuItemRepository
+
+Customer -> MenuController: GET /api/menus
+MenuController -> MenuService: getAllMenus()
+MenuService -> MenuItemRepository: findAll()
+MenuItemRepository --> MenuService: List<MenuItem>
+MenuService --> MenuController: DTO List
+MenuController --> Customer: JSON Response
+@enduml
+
+@startuml
+title Order Dinner (주문 하기)
+
+actor Customer
+participant "Frontend\n(OrderCustomizationScreen)" as Frontend
+participant OrderController
+participant OrderService
+participant MenuItemRepository
+participant CustomerRepository
+participant InventoryService
+participant InventoryRepository
+participant "Inventory\n(Domain Entity)" as InventoryEntity
+participant OrderRepository
+participant Database
+
+Customer -> Frontend: Click "Confirm Order"
+Frontend -> Frontend: checkBusinessHours()
+Frontend -> OrderController: POST /api/orders (OrderRequestDto)
+OrderController -> OrderService: createOrder(request)
+
+OrderService -> CustomerRepository: findById(customerId)
+CustomerRepository --> OrderService: User Entity
+
+loop For Each Item
+    OrderService -> MenuItemRepository: findById(itemId)
+    MenuItemRepository --> OrderService: MenuItem Entity
+    OrderService -> InventoryService: deductStock(menuItem, quantity)
+    InventoryService -> InventoryRepository: findById(stockId)
+    InventoryRepository --> InventoryService: Inventory Entity
+    InventoryService -> InventoryEntity: decreaseQuantity(amount)
+    InventoryEntity -> InventoryEntity: updateStatus()
+    InventoryService -> Database: Save Inventory (Transactional)
+end
+
+OrderService -> OrderService: Calculate Total Price\n(Base + Style + Addons)
+OrderService -> OrderRepository: countByCustomer(user)
+OrderRepository --> OrderService: orderCount
+OrderService -> OrderService: Calculate Discount (Tier)
+
+OrderService -> Database: save(Order)
+Database --> OrderService: Saved Order
+OrderService --> OrderController: orderId
+OrderController --> Frontend: 200 OK (orderId)
+Frontend --> Customer: Show Success Alert
+@enduml
+
+@startuml
+title Voice Order (음성 주문)
+actor Customer
+participant "Frontend\n(VoiceOrderScreen)" as Frontend
+participant AIServer
+participant ChatOrchestratorService
+participant OrderService
+
+Customer -> Frontend: Click Mic & Speak
+Frontend -> AIServer: Send Audio
+AIServer -> AIServer: STT & NLU (Extract Intent/Entities)
+AIServer -> ChatOrchestratorService: processed Order Request
+ChatOrchestratorService -> OrderService: createOrderFromChat(request)
+OrderService -> OrderService: (Execute Order Logic)
+OrderService --> ChatOrchestratorService: orderId
+ChatOrchestratorService --> AIServer: success
+AIServer --> Frontend: Order Confirmed
+Frontend --> Customer: Display Confirmation
+@enduml
+
+@startuml
+title View Orders (주문 내역 조회)
+actor Staff
+participant StaffOrderController
+participant StaffOrderService
+participant OrderRepository
+
+Staff -> StaffOrderController: GET /api/staff-orders?status=...
+StaffOrderController -> StaffOrderService: getOrders(status)
+StaffOrderService -> OrderRepository: findByStatus(status)
+OrderRepository --> StaffOrderService: List<Order>
+StaffOrderService --> StaffOrderController: List<OrderResponseDto>
+StaffOrderController --> Staff: JSON Response
+@enduml
+
+@startuml
+title Update Order Status (Cooking -> Ready)
+
+actor KitchenStaff
+participant "Frontend\n(StaffOrdersScreen)" as Frontend
+participant StaffOrderController
+participant StaffOrderService
+participant AccessControlService
+participant "Staff\n(Polymorphic)" as StaffEntity
+participant OrderRepository
+participant OrderProcessLogRepository
+participant Database
+
+KitchenStaff -> Frontend: Click "Mark as Ready"
+Frontend -> StaffOrderController: PATCH /api/staff-orders/{id}/status
+StaffOrderController -> StaffOrderService: updateStatusAndAudit(orderId, READY, staffId)
+
+StaffOrderService -> StaffOrderService: Fetch Staff by ID
+StaffOrderService -> AccessControlService: verifyStaffAccess(staff, READY)
+AccessControlService -> StaffEntity: canHandle(READY)
+StaffEntity --> AccessControlService: true
+AccessControlService --> StaffOrderService: void
+
+StaffOrderService -> OrderRepository: findById(orderId)
+OrderRepository --> StaffOrderService: Order Entity
+
+StaffOrderService -> OrderProcessLogRepository: save(new Log(READY, staffId))
+OrderProcessLogRepository -> Database: Insert Log
+
+StaffOrderService -> Database: update Order Status (READY)
+
+StaffOrderService --> StaffOrderController: void
+StaffOrderController --> Frontend: 200 OK
+Frontend --> KitchenStaff: Update List UI
+@enduml
+
+@startuml
+title Update Order Status (Ready -> Delivered)
+actor DeliveryStaff
+participant "Frontend\n(StaffDeliveryScreen)" as Frontend
+participant StaffOrderController
+participant StaffOrderService
+participant AccessControlService
+participant "Staff\n(Polymorphic)" as StaffEntity
+participant OrderRepository
+participant Database
+
+DeliveryStaff -> Frontend: Click "Complete Delivery"
+Frontend -> StaffOrderController: PATCH /api/staff-orders/{id}/status
+StaffOrderController -> StaffOrderService: updateStatusAndAudit(orderId, DELIVERED, staffId)
+
+StaffOrderService -> AccessControlService: verifyStaffAccess(staff, DELIVERED)
+AccessControlService -> StaffEntity: canHandle(DELIVERED)
+StaffEntity --> AccessControlService: true
+
+StaffOrderService -> OrderRepository: findById(orderId)
+StaffOrderService -> Database: Insert Log (DELIVERED)
+StaffOrderService -> Database: Update Order Status (DELIVERED)
+
+StaffOrderService --> StaffOrderController: void
+StaffOrderController --> Frontend: 200 OK
+@enduml
+
+@startuml
+title Manage Inventory (재고 관리 - increaseQuantity)
+actor Staff
+participant "Frontend\n(StaffLiquorScreen)" as Frontend
+participant InventoryController
+participant InventoryService
+participant InventoryRepository
+participant "Inventory\n(Domain Entity)" as InventoryEntity
+participant Database
+
+Staff -> Frontend: Click "Order More"
+Frontend -> InventoryController: POST /api/inventories/{id}/add\n{amount: 10}
+InventoryController -> InventoryService: increaseQuantity(id, 10)
+InventoryService -> InventoryRepository: findById(id)
+InventoryRepository --> InventoryService: Inventory Entity
+InventoryService -> InventoryEntity: increaseQuantity(10)
+InventoryEntity -> InventoryEntity: quantity += 10
+InventoryEntity -> InventoryEntity: updateStatus()
+InventoryService -> Database: Commit Transaction
+InventoryController --> Frontend: 200 OK
+@enduml

@@ -7,7 +7,6 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 
-
 @Entity
 @Getter
 @Setter
@@ -20,5 +19,12 @@ public class DeliveryStaff extends Staff {
         super(name, email, password, phoneNumber);
     }
 
-    public DeliveryStaff() {}
+    public DeliveryStaff() {
+    }
+
+    @Override
+    public boolean canHandle(com.hellofood.backend.domain.order.Order.OrderStatus status) {
+        // 배달 직원: 배달 완료(DELIVERED) 상태 처리 가능
+        return status == com.hellofood.backend.domain.order.Order.OrderStatus.DELIVERED;
+    }
 }

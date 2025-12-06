@@ -1,0 +1,92 @@
+@startuml
+
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+
+title Package Diagram
+
+package "Controller" {
+    class AuthController
+    class ChatController
+    class CustomerController
+    class InventoryController
+    class MenuItemController
+    class OrderController
+    class StaffOrderController
+}
+
+package "Service" {
+    class AuthenticationService
+    class AuthenticationServiceImpl
+    class ChatOrchestratorService
+    class InventoryService
+    class OrderService
+    class RecipeUsageProvider
+    class StaffOrderService
+    class UsageProvider
+}
+
+package "Repository" {
+    interface CustomerRepository <<interface>>
+    interface InventoryRepository <<interface>>
+    interface MenuItemRepository <<interface>>
+    interface OrderProcessLogRepository <<interface>>
+    interface OrderRepository <<interface>>
+    interface RecipeRepository <<interface>>
+    interface StaffRepository <<interface>>
+}
+
+package "Domain" {
+    package "order" {
+        class Cart
+        class MenuItem
+        class Order
+        class OrderItem
+        class OrderProcessLog
+        class Recipe
+        enum OrderStatus
+    }
+    
+    package "user" {
+        class Customer
+        class CustomerTier
+        class DeliveryStaff
+        class KitchenStaff
+        class Staff
+        class User
+    }
+    
+    package "inventory" {
+        class Inventory
+    }
+}
+
+package "DTO" {
+    package "order_dto" {
+        class OrderRequestDto
+        class OrderResponseDto
+        class OrderListResponseDto
+    }
+    package "user_dto" {
+        class AuthRequestDto
+        class AuthResponseDto
+        class CustomerDto
+    }
+    package "inventory_dto" {
+        class InventoryRequestDto
+        class InventoryResponseDto
+    }
+    package "chat_dto" {
+        class ChatMessageDto
+        class ChatResponseDto
+        class IntentExtractionDto
+    }
+}
+
+Controller ..> Service : uses
+Controller ..> DTO : uses
+Service ..> Repository : uses
+Service ..> Domain : uses
+Service ..> DTO : uses
+Repository ..> Domain : manages
+@enduml

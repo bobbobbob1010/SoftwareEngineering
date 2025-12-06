@@ -7,7 +7,7 @@ import axios from 'axios';
 function OrderCustomizationScreen() {
   const navigate = useNavigate();
   const { dinnerType } = useParams();
-  
+
   // ==========================================
   // [변경 1] 데이터 상태 관리 (빈 배열로 시작)
   // ==========================================
@@ -34,8 +34,28 @@ function OrderCustomizationScreen() {
     'deluxe': 30.00
   };
 
+
+
+  // ============================================
+  // 영업 시간 체크 (Helper)
+  // ============================================
+  const checkBusinessHours = () => {
+    const now = new Date();
+    const hours = now.getHours();
+    const minutes = now.getMinutes();
+    const currentTime = hours * 60 + minutes;
+
+    const start = 15 * 60 + 30; // 15:30
+    const end = 22 * 60;        // 22:00
+
+    if (currentTime < start || currentTime > end) {
+      alert("⚠️ Business Hours Alert ⚠️\n\nOur service hours are 15:30 - 22:00.\nYou can still place an order, but it may be processed during the next business hours.");
+    }
+  };
+
+
   const location = useLocation();
-  
+
   // 전달받은 state가 있으면 그 값을 쓰고, 없으면 기본값(예: 'grand') 사용
   // (유저가 URL을 직접 쳐서 들어왔을 경우 state가 null일 수 있으므로 안전장치 필요)
   const style = location.state?.selectedStyle || 'grand';
@@ -45,7 +65,7 @@ function OrderCustomizationScreen() {
   const dinner = dinnerInfo[dinnerType] || dinnerInfo['valentine']; //Dinner 정보 가져오기
   const rawBasePrice = dinner.basePrice;                 // 디너 순수 가격
   const styleFee = STYLE_EXTRA_FEES[style] || 0;  // 선택된 스타일의 추가금
-  const basePrice = (rawBasePrice + styleFee)* quantity;        // 최종 기본 가격
+  const basePrice = (rawBasePrice + styleFee) * quantity;        // 최종 기본 가격
 
 
   // ==========================================
@@ -61,7 +81,7 @@ function OrderCustomizationScreen() {
         const baseRes = await axios.get(`http://localhost:8080/api/menu-items`, {
           params: { type: dinnerType, isBaseItem: true }
         });
-        
+
         // 데이터 매핑: 백엔드(unitPrice) -> 프론트(addPrice)
         const mappedBaseItems = baseRes.data.map(item => ({
           ...item,
@@ -73,12 +93,12 @@ function OrderCustomizationScreen() {
 
         // B. 추가 메뉴(Add-on) 조회
         const addonRes = await axios.get(`http://localhost:8080/api/menu-items`, {
-            params: { isBaseItem: false }
+          params: { isBaseItem: false }
         });
-        
+
         const mappedAddons = addonRes.data.map(item => ({
-            ...item,
-            price: item.unitPrice 
+          ...item,
+          price: item.unitPrice
         }));
         setAvailableAddons(mappedAddons);
 
@@ -95,20 +115,20 @@ function OrderCustomizationScreen() {
       const user = JSON.parse(localStorage.getItem('currentUser'));
       setCurrentUser(user);
       try {
-      // 고객 등급 정보 불러오기
-      const customerTierRes = await axios.get(`http://localhost:8080/api/customers/${user.id}`);
-      const customerTierData = customerTierRes.data;
-      setCustomerTier({
+        // 고객 등급 정보 불러오기
+        const customerTierRes = await axios.get(`http://localhost:8080/api/customers/${user.id}`);
+        const customerTierData = customerTierRes.data;
+        setCustomerTier({
           name: customerTierData.tierName,       // 예: "GOLD"
           discountRate: customerTierData.discountRate, // 예: 15
           icon: customerTierData.tierIcon        // 예: "🥇"
         });
-      setDiscountRate(customerTierData.discountRate);
+        setDiscountRate(customerTierData.discountRate);
       } catch (error) {
         console.error("Failed to load customer data", error);
       }
     };
-  
+
     loadCustomerTierData();
     fetchMenuData();
   }, [dinnerType]);
@@ -183,7 +203,7 @@ function OrderCustomizationScreen() {
   const subTotal = basePrice + addOnPrice; // 할인 전 금액
   const discountAmount = subTotal * (discountRate / 100); // 할인 금액
   const finalPrice = subTotal - discountAmount; // 최종 금액
-  
+
   const totalPrice = finalPrice.toFixed(2); // 화면 표시용
 
   const addedItemsList = getAddedItemsList();
@@ -193,6 +213,7 @@ function OrderCustomizationScreen() {
   // [변경 3] 주문 확정 (백엔드로 전송)
   // ==========================================
   const handleConfirmOrder = async () => {
+    checkBusinessHours();
     const currentUser = JSON.parse(localStorage.getItem('currentUser'));
     if (!currentUser) {
       alert('Please login first');
@@ -202,35 +223,35 @@ function OrderCustomizationScreen() {
 
     // DTO 구성
     const orderPayload = {
-        customerId: currentUser.id,
-        dinnerType: dinnerType,
-        deliveryAddress: currentUser.address,
-        items: [
-            ...items.filter(i => i.quantity > 0).map(i => ({ menuItemId: i.id, quantity: i.quantity })),
-            ...addedItems.map(i => ({ menuItemId: i.id, quantity: i.quantity }))
-        ],
-        servingStyle : style,
-        quantity : quantity
+      customerId: currentUser.id,
+      dinnerType: dinnerType,
+      deliveryAddress: currentUser.address,
+      items: [
+        ...items.filter(i => i.quantity > 0).map(i => ({ menuItemId: i.id, quantity: i.quantity })),
+        ...addedItems.map(i => ({ menuItemId: i.id, quantity: i.quantity }))
+      ],
+      servingStyle: style,
+      quantity: quantity
     };
 
     try {
-        const response = await axios.post('http://localhost:8080/api/orders', orderPayload);
-        if (response.status === 200 || response.status === 201) {
-            alert(`Order confirmed! Order ID: ${response.data}`);
-            navigate(`/order-details/${response.data}`); // 백엔드가 준 ID로 이동
-        }
+      const response = await axios.post('http://localhost:8080/api/orders', orderPayload);
+      if (response.status === 200 || response.status === 201) {
+        alert(`Order confirmed! Order ID: ${response.data}`);
+        navigate(`/order-details/${response.data}`); // 백엔드가 준 ID로 이동
+      }
     } catch (err) {
-        console.error("Order failed", err);
-        alert("주문 처리에 실패했습니다.\n"+(err.response?.data?.message || err.message));
+      console.error("Order failed", err);
+      alert("주문 처리에 실패했습니다.\n" + (err.response?.data?.message || err.message));
     }
   };
 
-  if (loading) return <div style={{color:'white', padding:'20px'}}>Loading...</div>;
+  if (loading) return <div style={{ color: 'white', padding: '20px' }}>Loading...</div>;
 
   return (
     <div style={{ backgroundColor: '#1a1a1a', minHeight: '100vh', padding: '20px', overflow: 'auto' }}>
       <div style={{ maxWidth: '500px', margin: '0 auto' }}>
-        
+
         {/* 헤더 및 기본 정보 */}
         <button onClick={() => navigate(`/menu-details/${dinnerType}`)} style={{ background: 'none', border: 'none', color: '#b0b0b0', fontSize: '20px', cursor: 'pointer', marginBottom: '20px' }}>← Back</button>
         <h1 style={{ fontSize: '28px', fontWeight: 'bold', color: '#FFFFFF', marginBottom: '10px', textAlign: 'center' }}>{dinner.icon} {dinner.name}</h1>
@@ -259,9 +280,9 @@ function OrderCustomizationScreen() {
                 <p style={{ fontSize: '11px', color: '#b0b0b0' }}>Included: {quantity} {isExtra && ` (+${item.quantity - quantity} extra)`}</p>
               </div>
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                <button onClick={() => handleQuantityChange(item.id, Math.max(0, item.quantity - 1))} style={{ width: '30px', height: '30px', backgroundColor: '#FF6B6B', border: 'none', borderRadius: '5px', color:'white' }}>−</button>
+                <button onClick={() => handleQuantityChange(item.id, Math.max(0, item.quantity - 1))} style={{ width: '30px', height: '30px', backgroundColor: '#FF6B6B', border: 'none', borderRadius: '5px', color: 'white' }}>−</button>
                 <span style={{ width: '30px', textAlign: 'center', color: '#FFF' }}>{item.quantity}</span>
-                <button onClick={() => handleQuantityChange(item.id, item.quantity + 1)} style={{ width: '30px', height: '30px',backgroundColor: '#4CAF50', border: 'none', borderRadius: '5px', color:'white' }}>+</button>
+                <button onClick={() => handleQuantityChange(item.id, item.quantity + 1)} style={{ width: '30px', height: '30px', backgroundColor: '#4CAF50', border: 'none', borderRadius: '5px', color: 'white' }}>+</button>
               </div>
             </div>
           );
@@ -315,9 +336,9 @@ function OrderCustomizationScreen() {
           )}
         </div>
 
-        <button onClick={handleConfirmOrder} style={{ width: '100%', padding: '15px', borderRadius: '10px', backgroundColor: '#FFC107', border: 'none', fontWeight: 'bold', fontSize: '16px', marginBottom: '10px', cursor:'pointer' }}>Confirm Order</button>
-        <button onClick={() => navigate('/customer-home')} style={{ width: '100%', padding: '15px', borderRadius: '10px', backgroundColor: '#444', border: 'none', color: 'white', fontWeight: 'bold', fontSize: '16px', cursor:'pointer' }}>Cancel</button>
-      
+        <button onClick={handleConfirmOrder} style={{ width: '100%', padding: '15px', borderRadius: '10px', backgroundColor: '#FFC107', border: 'none', fontWeight: 'bold', fontSize: '16px', marginBottom: '10px', cursor: 'pointer' }}>Confirm Order</button>
+        <button onClick={() => navigate('/customer-home')} style={{ width: '100%', padding: '15px', borderRadius: '10px', backgroundColor: '#444', border: 'none', color: 'white', fontWeight: 'bold', fontSize: '16px', cursor: 'pointer' }}>Cancel</button>
+
       </div>
     </div>
   );

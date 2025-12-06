@@ -6,7 +6,7 @@ import '../../App.css';
 function MenuDetailsScreen() {
   const navigate = useNavigate();
   const { dinnerType } = useParams();
-  
+
   // ============================================
   // 상태 관리
   // ============================================
@@ -27,12 +27,12 @@ function MenuDetailsScreen() {
     const user = JSON.parse(localStorage.getItem('currentUser'));
     if (user) {
       setCurrentUser(user);
-      
+
       // 할인율 계산 (Backend에서 받으면 좋음)
       // 임시로 localStorage에서 주문 수 조회
       const allOrders = JSON.parse(localStorage.getItem('orders') || '[]');
       const userOrders = allOrders.filter(order => order.customerId === user.id);
-      
+
       const tier = calculateTier(userOrders.length);
       setDiscountRate(tier.discountRate);
     }
@@ -43,7 +43,7 @@ function MenuDetailsScreen() {
       try {
         // DB에서 해당 디너 타입의 "기본 구성품(Base Items)"을 조회
         const response = await axios.get(`http://localhost:8080/api/menu-items`, {
-            params: { type: dinnerType, isBaseItem: true }
+          params: { type: dinnerType, isBaseItem: true }
         });
 
         // 가져온 데이터를 state에 저장 (기본 수량 1개로 설정)
@@ -54,7 +54,7 @@ function MenuDetailsScreen() {
           addPrice: item.unitPrice
         }));
         setItems(mappedBaseItems);// 이제 items에 ID가 포함된 객체들이 담깁니다.
-      
+
       } catch (err) {
         console.error("Failed to load menu items", err);
         // UI에는 하드코딩된 텍스트가 나오므로 에러가 나도 사용자 경험을 위해 조용히 넘어갈 수도 있음
@@ -181,8 +181,8 @@ function MenuDetailsScreen() {
   // ============================================
   // 스타일 및 가격 계산
   // ============================================
-  const availableStyles = dinnerType === 'champagne' 
-    ? ['grand', 'deluxe'] 
+  const availableStyles = dinnerType === 'champagne'
+    ? ['grand', 'deluxe']
     : ['simple', 'grand', 'deluxe'];
 
   let currentPrice = dinner.priceByStyle[style];
@@ -194,15 +194,34 @@ function MenuDetailsScreen() {
 
   const isChampaigneFeast = dinnerType === 'champagne';
   const displayQuantity = isChampaigneFeast ? 1 : quantity;
-  
+
   const discountedPrice = (currentPrice * (1 - discountRate / 100)).toFixed(2);
   const discountAmount = (currentPrice - discountedPrice).toFixed(2);
   const totalPrice = (discountedPrice * displayQuantity).toFixed(2);
 
   // ============================================
+  // 영업 시간 체크 (Helper)
+  // ============================================
+  const checkBusinessHours = () => {
+    const now = new Date();
+    const hours = now.getHours();
+    const minutes = now.getMinutes();
+    const currentTime = hours * 60 + minutes;
+
+    const start = 15 * 60 + 30; // 15:30
+    const end = 22 * 60;        // 22:00
+
+    if (currentTime < start || currentTime > end) {
+      alert("⚠️ Business Hours Alert ⚠️\n\nOur service hours are 15:30 - 22:00.\nYou can still place an order, but it may be processed during the next business hours.");
+    }
+  };
+
+  // ============================================
   // API: 주문 생성 (Add as is 버튼)
   // ============================================
   const handleAddAsIs = async () => {
+    checkBusinessHours(); // 영업 시간 체크 (경고만 표시)
+
     if (!currentUser) {
       alert('Please login first');
       navigate('/customer-login');
@@ -212,7 +231,7 @@ function MenuDetailsScreen() {
     setLoading(true);
     setError(null);
 
-    
+
     try {
       // 주문 데이터 구성
       const newOrder = {
@@ -235,15 +254,15 @@ function MenuDetailsScreen() {
 
       // DTO 구성
       const orderPayload = {
-          customerId: currentUser.id,
-          dinnerType: dinnerType,
-          deliveryAddress: currentUser.address,
-          quantity: displayQuantity,
-          items: [
-              ...items.filter(i => i.quantity > 0).map(i => ({ menuItemId: i.id, quantity: i.quantity * displayQuantity  })),
-              ...addedItems.map(i => ({ menuItemId: i.id, quantity: i.quantity * displayQuantity }))
-          ],
-          servingStyle : style
+        customerId: currentUser.id,
+        dinnerType: dinnerType,
+        deliveryAddress: currentUser.address,
+        quantity: displayQuantity,
+        items: [
+          ...items.filter(i => i.quantity > 0).map(i => ({ menuItemId: i.id, quantity: i.quantity * displayQuantity })),
+          ...addedItems.map(i => ({ menuItemId: i.id, quantity: i.quantity * displayQuantity }))
+        ],
+        servingStyle: style
       };
 
       // ✅ Backend API로 주문 전송
@@ -254,10 +273,9 @@ function MenuDetailsScreen() {
 
       // 성공 응답
       const orderId = response.data.id || response.data;
-      
+
       alert(
-        `Order confirmed! Total: $${totalPrice}${
-          discountRate > 0 ? ` (${discountRate}% discount applied)` : ''
+        `Order confirmed! Total: $${totalPrice}${discountRate > 0 ? ` (${discountRate}% discount applied)` : ''
         }`
       );
 
@@ -558,7 +576,7 @@ function MenuDetailsScreen() {
           }}>
             ${totalPrice}
           </p>
-          
+
           {!isChampaigneFeast && (
             <p style={{
               fontSize: '12px',
@@ -598,11 +616,11 @@ function MenuDetailsScreen() {
         {/* 버튼들 */}
         <button
           onClick={() => {
-            navigate(`/customize-order/${dinnerType}`, { 
-              state: { 
+            navigate(`/customize-order/${dinnerType}`, {
+              state: {
                 selectedStyle: style,     // 현재 선택된 style 값 ('simple', 'grand' 등)
                 currentQuantity: quantity // 필요하다면 수량도 같이 넘길 수 있음
-              } 
+              }
             });
           }}
           className="btn-primary"
@@ -615,7 +633,7 @@ function MenuDetailsScreen() {
           onClick={handleAddAsIs}
           disabled={loading}
           className="btn-secondary"
-          style={{ 
+          style={{
             marginBottom: '15px',
             opacity: loading ? 0.5 : 1,
             cursor: loading ? 'not-allowed' : 'pointer'

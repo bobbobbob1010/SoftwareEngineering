@@ -10,11 +10,11 @@ import lombok.Data;
 public class InventoryResponseDto {
     private Long stockID;
     private String itemName;
-    private int quantityAvailable;
+    private BigDecimal quantityAvailable;
     private String unit;
-    private int minQuantity;
+    private BigDecimal minQuantity;
     private String status;
-    private List<String> usedInMenus; //이 재료가 사용되는 메뉴 이름 목록
+    private List<String> usedInMenus; // 이 재료가 사용되는 메뉴 이름 목록
     private BigDecimal cost; // 원가
 
     // Entity -> DTO 변환 생성자

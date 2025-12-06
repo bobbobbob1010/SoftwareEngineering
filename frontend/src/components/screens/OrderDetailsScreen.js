@@ -71,13 +71,13 @@ function OrderDetailsScreen() {
       }
     };
 
-    if(orderId) {
+    if (orderId) {
       fetchOrderDetails();
     }
   }, [orderId, navigate]);
 
-  if (loading) return <div style={{color:'white', padding:'20px'}}>Loading details...</div>;
-  if (!order) return <div style={{color:'white', padding:'20px'}}>Order not found</div>;
+  if (loading) return <div style={{ color: 'white', padding: '20px' }}>Loading details...</div>;
+  if (!order) return <div style={{ color: 'white', padding: '20px' }}>Order not found</div>;
 
 
   const getStatusColor = (status) => {
@@ -91,11 +91,11 @@ function OrderDetailsScreen() {
       case 'inprogress':
         return '#FFC107';
       case 'ready':
-        return '#2196F3'; 
+        return '#2196F3';
       case 'pending':
         return '#FF9800';
       case 'cancelled':
-        return '#F44336'; 
+        return '#F44336';
       default:
         return '#9E9E9E';
     }
@@ -116,15 +116,15 @@ function OrderDetailsScreen() {
 
   // 백엔드 날짜 포맷팅 (예: "2025-11-27 19:00:00")
   const formatDate = (dateString) => {
-      if(!dateString) return "";
-      const date = new Date(dateString);
-      return date.toLocaleDateString();
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    return date.toLocaleDateString();
   }
 
   const formatTime = (dateString) => {
-      if(!dateString) return "";
-      const date = new Date(dateString);
-      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   }
 
   // dinnerType 코드를 받아서 예쁜 이름으로 바꿔주는 함수
@@ -207,7 +207,7 @@ function OrderDetailsScreen() {
             color: '#b0b0b0',
             marginTop: '10px'
           }}>
-            {order.date ? `${order.date} at ${order.time}` : ''}{/*date(배달시간)이 있을 경우에만 표시 */}
+            {order.actualDeliveryTime ? `${new Date(order.actualDeliveryTime).toLocaleDateString()} at ${new Date(order.actualDeliveryTime).toLocaleTimeString()}` : ''}{/*date(배달시간)이 있을 경우에만 표시 */}
           </p>
         </div>
 
@@ -290,42 +290,41 @@ function OrderDetailsScreen() {
             {order.deliveryAddress}
           </p>
 
-          <p style={{
-            fontSize: '12px',
-            color: '#b0b0b0',
-            marginBottom: '5px'
-          }}>
-            Expected Delivery Time
-          </p>
-          <p style={{
-            color: '#FFFFFF',
-            marginBottom: '15px',
-            fontWeight: 'bold'
-          }}>
-            {order.deliveryTime}
-          </p>
-
-          {order.status === 'Delivered' && (
+          {(order.readyTime) && (
             <>
               <p style={{
                 fontSize: '12px',
                 color: '#b0b0b0',
                 marginBottom: '5px'
               }}>
-                Driver
+                Ready At
               </p>
               <p style={{
                 color: '#FFFFFF',
                 fontWeight: 'bold',
+                marginBottom: '15px'
+              }}>
+                {new Date(order.readyTime).toLocaleTimeString()}
+              </p>
+
+            </>
+          )}
+
+          {(order.actualDeliveryTime) && (
+            <>
+              <p style={{
+                fontSize: '12px',
+                color: '#b0b0b0',
                 marginBottom: '5px'
               }}>
-                {order.driverName}
+                Delivered At
               </p>
               <p style={{
-                color: '#b0b0b0',
-                fontSize: '12px'
+                color: '#FFFFFF',
+                fontWeight: 'bold',
+                marginBottom: '15px'
               }}>
-                {order.driverPhone}
+                {new Date(order.actualDeliveryTime).toLocaleTimeString()}
               </p>
             </>
           )}

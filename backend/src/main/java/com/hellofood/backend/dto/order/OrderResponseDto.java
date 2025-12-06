@@ -18,10 +18,10 @@ public class OrderResponseDto {
     private String status;
     private String orderTime;
     private String deliveryAddress;
-    private BigDecimal discountAmount;  // 할인된 금액 (예: 15.00)
-    
+    private BigDecimal discountAmount; // 할인된 금액 (예: 15.00)
+
     // [추가] 원래 가격 (프론트엔드 표시용)
-    private BigDecimal originalPrice;   // (예: 100.00)
+    private BigDecimal originalPrice; // (예: 100.00)
 
     // [추가] 주문자 이름 필드
     private String customerName;
@@ -33,11 +33,17 @@ public class OrderResponseDto {
     private String driverName = "John Doe";
     private String driverPhone = "+1-555-0123";
     private String deliveryTime = "30-45 minutes";
-    
-    private Long kitchenStaffId = null; 
-    private LocalDateTime readyTime = null; // LocalDateTime 그대로 프론트엔드로 전달
 
-    //order 객체를 받아 DTO만드는과정
+    private Long kitchenStaffId = null;
+    private String kitchenStaffName = null;
+    private LocalDateTime readyTime = null;
+
+    // [추가] 배달원 정보
+    private Long deliveryStaffId = null;
+    private String deliveryStaffName = null;
+    private LocalDateTime actualDeliveryTime = null;
+
+    // order 객체를 받아 DTO만드는과정
     public OrderResponseDto(Order order) {
         this.id = order.getOrderId();
         this.dinnerName = order.getDinnerType();
@@ -46,7 +52,7 @@ public class OrderResponseDto {
         this.orderTime = order.getOrderDate();
         this.deliveryAddress = order.getDeliveryAddress();
         this.totalPrice = order.getTotalPrice();
-        
+
         // [추가] 할인 금액이 null일 경우를 대비해 0으로 처리
         this.discountAmount = order.getDiscountAmount() != null
                 ? order.getDiscountAmount()
@@ -69,21 +75,32 @@ public class OrderResponseDto {
                 .collect(Collectors.toList());
     }
 
-
-    public OrderResponseDto(Order order, Long kitchenStaffId, LocalDateTime readyTime) {
+    public OrderResponseDto(Order order, Long kitchenStaffId, LocalDateTime readyTime, String kitchenStaffName,
+            Long deliveryStaffId, LocalDateTime actualDeliveryTime, String deliveryStaffName) {
         // 기존 생성자를 호출하여 Order 엔티티의 기본 정보를 모두 매핑합니다.
-        this(order); 
+        this(order);
 
         // Service에서 계산/추출된 값을 DTO 필드에 직접 대입하여 덮어씁니다.
-        this.kitchenStaffId = kitchenStaffId; 
+        this.kitchenStaffId = kitchenStaffId;
         this.readyTime = readyTime;
+        this.kitchenStaffName = kitchenStaffName;
+
+        this.deliveryStaffId = deliveryStaffId;
+        this.actualDeliveryTime = actualDeliveryTime;
+        this.deliveryStaffName = deliveryStaffName;
+
+        // 더미 데이터 필드도 실제 데이터가 있으면 업데이트 (프론트엔드 호환성 위해)
+        if (deliveryStaffName != null) {
+            this.driverName = deliveryStaffName;
+        }
     }
-    
+
     // 내부 클래스로 아이템 DTO 정의
     @Data
     public static class ItemDto {
         private String name;
         private BigDecimal price;
+
         private int qty;
 
         public ItemDto(OrderItem orderItem) {

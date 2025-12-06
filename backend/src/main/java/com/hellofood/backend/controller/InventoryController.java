@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
@@ -42,10 +43,21 @@ public class InventoryController {
     @PatchMapping("/{id}/quantity")
     public ResponseEntity<Void> updateQuantity(
             @PathVariable Long id,
-            @RequestBody Map<String, Integer> request
-    ) {
-        int newQuantity = request.get("quantity");
+            @RequestBody Map<String, BigDecimal> request) {
+        BigDecimal newQuantity = request.get("quantity");
         inventoryService.updateQuantity(id, newQuantity);
+        return ResponseEntity.ok().build();
+    }
+
+    // 4-1. 수량 증가 (입고)
+    // POST /api/inventories/{id}/add
+    // Body: { "amount": 10 }
+    @PostMapping("/{id}/add")
+    public ResponseEntity<Void> increaseQuantity(
+            @PathVariable Long id,
+            @RequestBody Map<String, BigDecimal> request) {
+        BigDecimal amount = request.get("amount");
+        inventoryService.increaseQuantity(id, amount);
         return ResponseEntity.ok().build();
     }
 
@@ -53,8 +65,7 @@ public class InventoryController {
     @PutMapping("/{id}")
     public ResponseEntity<Void> updateInventory(
             @PathVariable Long id,
-            @RequestBody InventoryRequestDto requestDto
-    ) {
+            @RequestBody InventoryRequestDto requestDto) {
         inventoryService.updateInventoryInfo(id, requestDto);
         return ResponseEntity.ok().build();
     }

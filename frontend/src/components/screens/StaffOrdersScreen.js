@@ -5,7 +5,7 @@ import '../../App.css';
 
 function StaffOrdersScreen() {
   const navigate = useNavigate();
-  
+
   // ============================================
   // 상태 관리
   // ============================================
@@ -14,6 +14,7 @@ function StaffOrdersScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [updatingId, setUpdatingId] = useState(null);
+  const [expandedOrderId, setExpandedOrderId] = useState(null);
 
   // ============================================
   // 컴포넌트 로드 시 주문 조회 (자동 새로고침)
@@ -21,7 +22,7 @@ function StaffOrdersScreen() {
   useEffect(() => {
     // 초기 로드
     fetchOrders();
-    
+
     // ⏰ 5초마다 자동으로 새 주문 확인
     const interval = setInterval(fetchOrders, 10000);
     return () => clearInterval(interval);
@@ -34,25 +35,25 @@ function StaffOrdersScreen() {
     try {
       setError(null);
       setLoading(true);
-      
+
       // ✅ Backend에서 모든 주문 조회
       const response = await axios.get(
         'http://localhost:8080/api/staff-orders'
       );
-      
+
       // 받은 주문 데이터 저장
-      const fetchedOrders = Array.isArray(response.data) 
+      const fetchedOrders = Array.isArray(response.data)
         ? response.data
         : response.data.orders || [];
-      
+
       setOrders(fetchedOrders);
       setLoading(false);
-      
+
     } catch (err) {
       console.error('Failed to fetch orders:', err);
       setError('주문을 불러올 수 없습니다');
       setLoading(false);
-      
+
       // 개발용: 에러 시 더미 데이터 표시
       setOrders([]);
     }
@@ -65,25 +66,25 @@ function StaffOrdersScreen() {
     const currentStaff = JSON.parse(localStorage.getItem('currentUser'));
     const staffId = currentStaff.id;
     const staffRole = currentStaff.userType;
-    
+
     try {
       setUpdatingId(orderId);
       setError(null);
-      
+
       // ✅ Backend에 상태 업데이트 요청
       await axios.patch(
         `http://localhost:8080/api/staff-orders/${orderId}/status`,
-        { 
+        {
           status: newStatus,
           staffId: staffId,
           staffRole: staffRole
-         }
+        }
       );
-      
+
       // 업데이트 성공 후 주문 목록 다시 조회
       fetchOrders();
       alert('주문 상태가 업데이트되었습니다');
-      
+
     } catch (err) {
       console.error('Failed to update order status:', err);
       setError('상태 업데이트 실패: ' + (err.response?.data?.message || err.message));
@@ -99,9 +100,9 @@ function StaffOrdersScreen() {
   const filteredOrders = selectedStatus === 'all'
     ? orders
     : orders.filter(order => {
-        const status = order.status?.toLowerCase() || order.orderStatus?.toLowerCase();
-        return status === selectedStatus;
-      });
+      const status = order.status?.toLowerCase() || order.orderStatus?.toLowerCase();
+      return status === selectedStatus;
+    });
 
   // ============================================
   // 상태별 색상
@@ -116,11 +117,11 @@ function StaffOrdersScreen() {
       case 'inprogress':
         return '#FFC107';
       case 'ready':
-        return '#2196F3'; 
+        return '#2196F3';
       case 'pending':
         return '#FF9800';
       case 'cancelled':
-        return '#F44336'; 
+        return '#F44336';
       default:
         return '#9E9E9E';
     }
@@ -159,18 +160,18 @@ function StaffOrdersScreen() {
   // ============================================
   // 주문 통계
   // ============================================
-  const pendingCount = orders.filter(o => 
-    o.status?.toLowerCase() === 'pending' || 
+  const pendingCount = orders.filter(o =>
+    o.status?.toLowerCase() === 'pending' ||
     o.orderStatus?.toLowerCase() === 'pending'
   ).length;
 
-  const inProgressCount = orders.filter(o => 
-    o.status?.toLowerCase() === 'in-progress' || 
+  const inProgressCount = orders.filter(o =>
+    o.status?.toLowerCase() === 'in-progress' ||
     o.status?.toLowerCase() === 'inprogress' ||
     o.orderStatus?.toLowerCase() === 'in-progress'
   ).length;
 
-  const completedCount = orders.filter(o => 
+  const completedCount = orders.filter(o =>
     o.status?.toLowerCase() === 'delivered' ||
     o.orderStatus?.toLowerCase() === 'delivered'
   ).length;
@@ -186,7 +187,7 @@ function StaffOrdersScreen() {
       overflow: 'auto'
     }}>
       <div style={{ maxWidth: '500px', margin: '0 auto' }}>
-        
+
         {/* 뒤로 가기 */}
         <button
           onClick={() => navigate('/staff-home')}
@@ -378,11 +379,11 @@ function StaffOrdersScreen() {
                       padding: '4px 10px',
                       fontSize: '11px',
                       fontWeight: 'bold',
-                      color: (order.status?.toLowerCase() === 'pending' || 
-                               order.status?.toLowerCase() === 'in-progress' ||
-                               order.status?.toLowerCase() === 'inprogress' 
-                               )
-                        ? '#000000' 
+                      color: (order.status?.toLowerCase() === 'pending' ||
+                        order.status?.toLowerCase() === 'in-progress' ||
+                        order.status?.toLowerCase() === 'inprogress'
+                      )
+                        ? '#000000'
                         : '#FFFFFF'
                     }}>
                       {getStatusText(order.status || order.orderStatus)}
@@ -398,7 +399,7 @@ function StaffOrdersScreen() {
                     👤 {order.customerName || 'Unknown'}
                   </p>
 
-                  {/* 메뉴 정보 */}
+                  {/* 메뉴 정보 (간략) */}
                   <p style={{
                     fontSize: '14px',
                     color: '#FFFFFF',
@@ -408,6 +409,53 @@ function StaffOrdersScreen() {
                     🍽️ {order.dinnerName || order.dinnerType || 'Dinner'}
                   </p>
 
+                  {/* 상세 메뉴 토글 버튼 */}
+                  <button
+                    onClick={() => setExpandedOrderId(expandedOrderId === order.id ? null : order.id)}
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.1)',
+                      border: 'none',
+                      borderRadius: '6px',
+                      color: '#e0e0e0',
+                      fontSize: '12px',
+                      padding: '8px 0',
+                      cursor: 'pointer',
+                      marginBottom: '10px',
+                      width: '100%',
+                      fontWeight: '500',
+                      transition: 'background 0.2s'
+                    }}
+                    onMouseEnter={(e) => e.target.style.background = 'rgba(255, 255, 255, 0.15)'}
+                    onMouseLeave={(e) => e.target.style.background = 'rgba(255, 255, 255, 0.1)'}
+                  >
+                    {expandedOrderId === order.id ? 'Hide Details ▲' : 'View Details ▼'}
+                  </button>
+
+                  {/* 상세 메뉴 목록 (펼쳐졌을 때만 표시) */}
+                  {expandedOrderId === order.id && order.items && (
+                    <div style={{
+                      backgroundColor: '#1f1f1f',
+                      padding: '10px',
+                      borderRadius: '8px',
+                      marginBottom: '15px'
+                    }}>
+                      {order.items.map((item, idx) => (
+                        <div key={idx} style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          marginBottom: '5px',
+                          fontSize: '13px',
+                          color: '#e0e0e0',
+                          borderBottom: idx !== order.items.length - 1 ? '1px solid #333' : 'none',
+                          paddingBottom: idx !== order.items.length - 1 ? '5px' : '0'
+                        }}>
+                          <span>{item.name} (x{item.qty || item.quantity})</span>
+                          {/* <span>${item.price}</span>  */}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
                   {/* 배송 주소 */}
                   <p style={{
                     fontSize: '12px',
@@ -416,17 +464,29 @@ function StaffOrdersScreen() {
                   }}>
                     📍 {order.deliveryAddress || 'TBD'}
                   </p>
-                  
-                  {/* 담당 직원 정보 */}
-                  {order.kitchenStaffId && (
-                      <p style={{ fontSize: '12px', color: '#b0b0b0' }}>
-                          👨‍🍳 Kitchen Staff ID: {order.kitchenStaffId}
-                      </p>
+
+                  {/* 담당 주방 직원 정보 */}
+                  {(order.kitchenStaffId || order.kitchenStaffName) && (
+                    <p style={{ fontSize: '12px', color: '#b0b0b0' }}>
+                      👨‍🍳 Kitchen Staff: {order.kitchenStaffName ? `${order.kitchenStaffName} (ID: ${order.kitchenStaffId})` : `ID: ${order.kitchenStaffId}`}
+                    </p>
                   )}
                   {order.readyTime && (
-                      <p style={{ fontSize: '12px', color: '#b0b0b0' }}>
-                          🕒 Ready Time: {new Date(order.readyTime).toLocaleTimeString()}
-                      </p>
+                    <p style={{ fontSize: '12px', color: '#b0b0b0', marginBottom: '5px' }}>
+                      🕒 Ready Time: {new Date(order.readyTime).toLocaleTimeString()}
+                    </p>
+                  )}
+
+                  {/* 담당 배달 직원 정보 */}
+                  {(order.deliveryStaffId || order.deliveryStaffName) && (
+                    <p style={{ fontSize: '12px', color: '#b0b0b0', borderTop: '1px solid #3a3a3a' }}>
+                      👨 Delivery Staff: {order.deliveryStaffName ? `${order.deliveryStaffName} (ID: ${order.deliveryStaffId})` : `ID: ${order.deliveryStaffId}`}
+                    </p>
+                  )}
+                  {order.deliveryTime && (
+                    <p style={{ fontSize: '12px', color: '#b0b0b0' }}>
+                      🕒 Delivery Time: {new Date(order.deliveryTime).toLocaleTimeString()}
+                    </p>
                   )}
 
                   {/* 가격과 시간 */}
@@ -436,20 +496,21 @@ function StaffOrdersScreen() {
                     alignItems: 'center',
                     paddingTop: '10px',
                     borderTop: '1px solid #3a3a3a',
-                    marginBottom: '15px'
+                    marginBottom: '15px',
+                    marginTop: '5px'
                   }}>
                     <span style={{ color: '#FFC107', fontWeight: 'bold' }}>
                       ${parseFloat(order.totalPrice || 0).toFixed(2)}
                     </span>
                     <span style={{ color: '#b0b0b0', fontSize: '12px' }}>
-                      ⏰ {order.orderTime 
-                        ? new Date(order.orderTime).toLocaleTimeString() 
+                      ⏰ {order.orderTime
+                        ? new Date(order.orderTime).toLocaleTimeString()
                         : 'TBD'}
                     </span>
                   </div>
 
                   {/* 상태 업데이트 버튼 */}
-                  {(order.status?.toLowerCase() !== 'delivered' && 
+                  {(order.status?.toLowerCase() !== 'delivered' &&
                     order.orderStatus?.toLowerCase() !== 'delivered') ? (
                     <button
                       onClick={() => {
@@ -481,8 +542,8 @@ function StaffOrdersScreen() {
                         }
                       }}
                     >
-                      {updatingId === order.id 
-                        ? '⏳ Processing...' 
+                      {updatingId === order.id
+                        ? '⏳ Processing...'
                         : `✅ Mark as ${getStatusText(getNextStatus(order.status || order.orderStatus))}`
                       }
                     </button>

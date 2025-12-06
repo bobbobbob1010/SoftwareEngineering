@@ -5,7 +5,7 @@ import lombok.Data;
 @Data
 public class InventoryRequestDto {
     private String itemName;
-    private int quantityAvailable;
-    private int minQuantity;
+    private java.math.BigDecimal quantityAvailable;
+    private java.math.BigDecimal minQuantity;
     private String unit;
 }

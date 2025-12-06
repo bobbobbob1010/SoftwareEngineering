@@ -41,7 +41,7 @@ public class InventoryService {
                 .orElseThrow(() -> new IllegalArgumentException("재고를 찾을 수 없습니다. id=" + id));
 
         List<String> menuNames = usageProvider.getMenuNamesByInventory(inventory);
-        
+
         return new InventoryResponseDto(inventory, menuNames);
     }
 
@@ -55,7 +55,7 @@ public class InventoryService {
         inventory.setUnit(requestDto.getUnit());
 
         // 초기 상태 계산 (Good/Low/Critical)
-        updateStatusBasedOnQuantity(inventory);
+        inventory.updateStatus();
 
         inventoryRepository.save(inventory);
         return inventory.getStockID();
@@ -63,14 +63,23 @@ public class InventoryService {
 
     // 4. 재고 수량 수정 (Update Quantity)
     @Transactional
-    public void updateQuantity(Long stockId, int newQuantity) {
+    public void updateQuantity(Long stockId, BigDecimal newQuantity) {
         Inventory inventory = inventoryRepository.findById(stockId)
                 .orElseThrow(() -> new IllegalArgumentException("재고를 찾을 수 없습니다. id=" + stockId));
 
         inventory.setQuantityAvailable(newQuantity);
-        
+
         // 수량이 변했으니 상태도 다시 계산
-        updateStatusBasedOnQuantity(inventory);
+        inventory.updateStatus();
+    }
+
+    // 4-1. 재고 수량 증가 (입고, Relative Update)
+    @Transactional
+    public void increaseQuantity(Long stockId, BigDecimal amount) {
+        Inventory inventory = inventoryRepository.findById(stockId)
+                .orElseThrow(() -> new IllegalArgumentException("재고를 찾을 수 없습니다. id=" + stockId));
+
+        inventory.increaseQuantity(amount);
     }
 
     // 5. 재고 정보 전체 수정 (이름, 최소수량 등)
@@ -82,9 +91,9 @@ public class InventoryService {
         inventory.setItemName(requestDto.getItemName());
         inventory.setMinQuantity(requestDto.getMinQuantity());
         inventory.setUnit(requestDto.getUnit());
-        
+
         // 최소 수량이 변했을 수도 있으니 상태 재계산
-        updateStatusBasedOnQuantity(inventory); 
+        inventory.updateStatus();
     }
 
     // 6. 삭제
@@ -94,18 +103,6 @@ public class InventoryService {
     }
 
     // [Helper] 수량에 따른 상태 자동 결정 로직
-    private void updateStatusBasedOnQuantity(Inventory inventory) {
-        int current = inventory.getQuantityAvailable();
-        int min = inventory.getMinQuantity();
-
-        if (current <= 0) {
-            inventory.setStatus("Critical"); // 품절/위험
-        } else if (current <= min) {
-            inventory.setStatus("Low");      // 부족
-        } else {
-            inventory.setStatus("Good");     // 양호
-        }
-    }
 
     // 주문시 재고 줄어들게
     @Transactional
@@ -121,23 +118,12 @@ public class InventoryService {
         // 2. 레시피에 정의된 재료별로 수량 차감
         for (Recipe recipe : recipes) {
             Inventory inventory = recipe.getInventory();
-            
+
             // 필요량 = 레시피당 소모량 * 주문 수량
             BigDecimal requiredQty = recipe.getRequiredQuantity().multiply(BigDecimal.valueOf(quantity));
 
-            int currentStock = inventory.getQuantityAvailable();
-            int deductAmount = requiredQty.intValue(); // 정수로 변환 (단위에 따라 조정 필요할 수 있음)
-
-            if (currentStock < deductAmount) {
-                throw new IllegalStateException("재고 부족: " + inventory.getItemName() 
-                        + " (남은 수량: " + currentStock + ", 필요 수량: " + deductAmount + ")");
-            }
-
-            // 차감 및 업데이트
-            inventory.setQuantityAvailable(currentStock - deductAmount);
-            
-            // 상태 업데이트 (Low, Critical 등)
-            updateStatusBasedOnQuantity(inventory);
+            // 도메인 메서드를 통해 차감 (검증 및 상태 업데이트 자동 수행)
+            inventory.decreaseQuantity(requiredQty);
         }
     }
 }

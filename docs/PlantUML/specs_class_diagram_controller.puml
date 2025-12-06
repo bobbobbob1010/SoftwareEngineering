@@ -1,0 +1,67 @@
+@startuml
+title Controller Package Class Diagram
+skinparam classAttributeIconSize 0
+
+package "Controller" {
+    class OrderController {
+        +confirmOrder(OrderRequestDto request): ResponseEntity<Long>
+        +getOrders(Long customerId): ResponseEntity<List<OrderListResponseDto>>
+        +deleteOrder(Long orderId): ResponseEntity<Void>
+        +getOrderDetails(Long orderId): ResponseEntity<OrderResponseDto>
+    }
+
+    class StaffOrderController {
+        +getOrdersByStatus(OrderStatus status): ResponseEntity<List<OrderResponseDto>>
+        +updateOrderStatus(Long orderId, Map<String, String> request): ResponseEntity<Void>
+    }
+
+    class AuthController {
+        +register(UserRegisterRequest request): ResponseEntity<Long>
+        +loginUsers(LoginRequest request): ResponseEntity<?>
+        +loginStaffs(LoginRequest request): ResponseEntity<?>
+    }
+
+    class InventoryController {
+        +getAllInventories(): ResponseEntity<List<InventoryResponseDto>>
+        +getInventory(Long id): ResponseEntity<InventoryResponseDto>
+        +createInventory(InventoryRequestDto requestDto): ResponseEntity<Long>
+        +updateQuantity(Long id, Map<String, BigDecimal> request): ResponseEntity<Void>
+        +increaseQuantity(Long id, Map<String, BigDecimal> request): ResponseEntity<Void>
+        +updateInventory(Long id, InventoryRequestDto requestDto): ResponseEntity<Void>
+        +deleteInventory(Long id): ResponseEntity<Void>
+    }
+}
+
+package "Service (Simplified)" {
+    class OrderService
+    class StaffOrderService
+    interface AuthenticationService <<interface>>
+    class InventoryService
+}
+
+package "DTO (Simplified)" {
+    class OrderRequestDto
+    class OrderResponseDto
+    class OrderListResponseDto
+    class UserRegisterRequest
+    class LoginRequest
+    class InventoryRequestDto
+    class InventoryResponseDto
+}
+
+' Dependencies
+OrderController ..> OrderService : uses
+OrderController ..> OrderRequestDto : uses
+OrderController ..> OrderResponseDto : uses
+
+StaffOrderController ..> StaffOrderService : uses
+StaffOrderController ..> OrderResponseDto : uses
+
+AuthController ..> AuthenticationService : uses
+AuthController ..> UserRegisterRequest : uses
+AuthController ..> LoginRequest : uses
+
+InventoryController ..> InventoryService : uses
+InventoryController ..> InventoryRequestDto : uses
+InventoryController ..> InventoryResponseDto : uses
+@enduml

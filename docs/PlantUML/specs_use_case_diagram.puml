@@ -1,0 +1,36 @@
+@startuml
+title Use Case Diagram
+left to right direction
+actor Customer
+actor "Kitchen Staff" as Kitchen
+actor "Delivery Staff" as Delivery
+
+rectangle "Mr. Daebak Dinner Service" {
+  usecase "Register" as UC1
+  usecase "Login" as UC2
+  usecase "View Menu" as UC3
+  usecase "Order Dinner\n(Customize & Pay)" as UC4
+  usecase "Voice Order" as UC5
+  usecase "View Orders" as UC6
+  usecase "Update Order Status\n(Cooking -> Ready)" as UC7
+  usecase "Update Order Status\n(Ready -> Delivered)" as UC8
+  usecase "Manage Inventory" as UC9
+}
+
+Customer --> UC1
+Customer --> UC2
+Customer --> UC3
+Customer --> UC4
+Customer --> UC5
+
+Kitchen --> UC2
+Kitchen --> UC6
+Kitchen --> UC7
+Kitchen --> UC9
+
+Delivery --> UC2
+Delivery --> UC6
+Delivery --> UC8
+
+UC4 ..> UC9 : <<include>>\n(Auto Deduct)
+@enduml

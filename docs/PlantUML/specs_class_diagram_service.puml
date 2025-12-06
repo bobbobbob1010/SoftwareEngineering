@@ -1,0 +1,93 @@
+@startuml
+title Service Package Class Diagram
+skinparam classAttributeIconSize 0
+
+package "Service" {
+    class OrderService {
+        +createOrder(OrderRequestDto request): Long
+        +createOrderFromChat(Long customerId, String menuName, int quantity): Long
+        +getOrders(Long customerId): List<OrderListResponseDto>
+        +getOrderDetails(Long orderId): OrderResponseDto
+        +deleteOrder(Long orderId)
+        -findLatestLogByStatus(List<OrderProcessLog> logs, OrderStatus status): OrderProcessLog
+    }
+
+    class StaffOrderService {
+        +getOrders(OrderStatus status): List<OrderResponseDto>
+        +updateStatusAndAudit(Long orderId, OrderStatus newStatus, Long staffId, String staffRole)
+    }
+
+    class InventoryService {
+        +getAllInventories(): List<InventoryResponseDto>
+        +getInventory(Long id): InventoryResponseDto
+        +createInventory(InventoryRequestDto requestDto): Long
+        +updateQuantity(Long stockId, BigDecimal newQuantity)
+        +increaseQuantity(Long stockId, BigDecimal amount)
+        +updateInventoryInfo(Long stockId, InventoryRequestDto requestDto)
+        +deleteInventory(Long stockId)
+        +deductStock(MenuItem menuItem, int quantity)
+    }
+
+    class PricingService {
+        +calculateBaseOrderPrice(String dinnerType, String servingStyle, int quantity): BigDecimal
+        +calculateOrderItemPrice(MenuItem menuItem, String orderDinnerType, int orderQuantity, int itemQuantity): BigDecimal
+        +calculateDiscount(BigDecimal totalPrice, int pastOrderCount): DiscountResult
+    }
+    
+    class AccessControlService {
+        +verifyStaffAccess(Staff staff, OrderStatus targetStatus)
+    }
+
+    interface AuthenticationService <<interface>> {
+        +registerCustomer(Customer customer): Long
+        +authenticateCustomer(String email, String password): Customer
+        +authenticateStaff(String email, String password): Staff
+    }
+
+    class AuthenticationServiceImpl {
+        +registerCustomer(Customer customer): Long
+        +authenticateCustomer(String email, String password): Customer
+        +authenticateStaff(String email, String password): Staff
+    }
+
+    class ChatOrchestratorService
+}
+
+package "Repository (Simplified)" {
+    interface OrderRepository <<interface>>
+    interface CustomerRepository <<interface>>
+    interface StaffRepository <<interface>>
+    interface MenuItemRepository <<interface>>
+    interface InventoryRepository <<interface>>
+    interface RecipeRepository <<interface>>
+    interface OrderProcessLogRepository <<interface>>
+}
+
+package "DTO (Simplified)" {
+    class OrderRequestDto
+    class OrderResponseDto
+    class InventoryRequestDto
+    class InventoryResponseDto
+}
+
+' Service Implementation
+AuthenticationServiceImpl ..|> AuthenticationService
+
+' Dependencies
+AuthenticationServiceImpl ..> CustomerRepository : uses
+AuthenticationServiceImpl ..> StaffRepository : uses
+
+OrderService ..> OrderRepository : uses
+OrderService ..> CustomerRepository : uses
+OrderService ..> MenuItemRepository : uses
+OrderService ..> InventoryService : uses
+OrderService ..> PricingService : uses
+
+StaffOrderService ..> OrderRepository : uses
+StaffOrderService ..> StaffRepository : uses
+StaffOrderService ..> OrderProcessLogRepository : uses
+StaffOrderService ..> AccessControlService : uses
+
+InventoryService ..> InventoryRepository : uses
+InventoryService ..> RecipeRepository : uses
+@enduml

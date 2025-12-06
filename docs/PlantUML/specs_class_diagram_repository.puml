@@ -1,0 +1,67 @@
+@startuml
+title Repository Package Class Diagram
+skinparam classAttributeIconSize 0
+
+package "Repository" {
+    interface OrderRepository <<interface>> {
+        +findByCustomer(Customer customer): Optional<Order>
+        +findAllByCustomerId(Long customerId): List<Order>
+        +countByCustomer(Customer customer): int
+        +findByStatus(OrderStatus status): List<Order>
+        +findAllWithLogs(): List<Order>
+    }
+
+    interface CustomerRepository <<interface>> {
+        +findByEmail(String email): Optional<Customer>
+        +existsByEmail(String email): boolean
+    }
+
+    interface StaffRepository <<interface>> {
+        +findByEmail(String email): Optional<Staff>
+        +existsByEmail(String email): boolean
+    }
+
+    interface InventoryRepository <<interface>> {
+        +findByItemName(String itemName): Optional<Inventory>
+    }
+
+    interface MenuItemRepository <<interface>> {
+        +findByName(String name): Optional<MenuItem>
+        +existsByName(String name): boolean
+        +findByDinnerTypeAndIsBaseItem(String dinnerType, boolean isBaseItem): List<MenuItem>
+        +findByIsBaseItem(boolean isBaseItem): List<MenuItem>
+    }
+
+    interface RecipeRepository <<interface>> {
+        +findByInventory(Inventory inventory): List<Recipe>
+        +findByMenuItem(MenuItem menuItem): List<Recipe>
+    }
+
+    interface OrderProcessLogRepository <<interface>> {
+        +save(OrderProcessLog log): OrderProcessLog
+        +findById(Long id): Optional<OrderProcessLog>
+    }
+}
+
+package "Domain (Simplified)" {
+    class Customer
+    class Staff
+    class Order
+    class Inventory
+    class MenuItem
+    class Recipe
+    class OrderProcessLog
+    enum OrderStatus
+}
+
+' Dependency Relationships
+OrderRepository ..> Customer
+OrderRepository ..> Order
+CustomerRepository ..> Customer
+StaffRepository ..> Staff
+InventoryRepository ..> Inventory
+MenuItemRepository ..> MenuItem
+RecipeRepository ..> Recipe
+RecipeRepository ..> Inventory
+OrderProcessLogRepository ..> OrderProcessLog
+@enduml

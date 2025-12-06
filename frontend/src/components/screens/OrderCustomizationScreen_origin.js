@@ -7,7 +7,7 @@ function OrderCustomizationScreen() {
   const navigate = useNavigate();
   const { dinnerType } = useParams();
   const [style, setStyle] = useState('grand');
-  
+
 
   const dinnerMenus = {
     'valentine': {
@@ -109,7 +109,7 @@ function OrderCustomizationScreen() {
   // Added Items 계산 (기본 아이템 수량 초과 + 추가 아이템)
   const getAddedItemsList = () => {
     const extraBasicItems = [];
-    
+
     items.forEach(item => {
       if (item.included) {
         const baseQuantity = dinner.items.find(orig => orig.id === item.id).quantity;
@@ -156,9 +156,9 @@ function OrderCustomizationScreen() {
   const totalPrice = (basePrice + addOnPrice).toFixed(2);
   const addedItemsList = getAddedItemsList();
 
-  const hasCustomizations = 
-    items.some(item => item.quantity === 0) || 
-    items.some((item, idx) => item.quantity !== dinner.items[idx].quantity) || 
+  const hasCustomizations =
+    items.some(item => item.quantity === 0) ||
+    items.some((item, idx) => item.quantity !== dinner.items[idx].quantity) ||
     addedItems.length > 0;
 
   return (
@@ -525,11 +525,13 @@ function OrderCustomizationScreen() {
         </div>
 
         {/* 버튼들 */}
-        <button
+        <button //주문 Confirm 버튼
           onClick={() => {
+
+
             // 현재 로그인한 고객 가져오기
             const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-            
+
             if (!currentUser) {
               alert('Please login first');
               navigate('/customer-login');
@@ -556,10 +558,10 @@ function OrderCustomizationScreen() {
 
             // 기존 주문들 가져오기
             const orders = JSON.parse(localStorage.getItem('orders') || '[]');
-            
+
             // 새 주문 추가
             orders.push(newOrder);
-            
+
             // localStorage에 저장
             localStorage.setItem('orders', JSON.stringify(orders));
 
@@ -578,7 +580,7 @@ function OrderCustomizationScreen() {
 
             // 성공 메시지
             alert(`Order confirmed! Total: $${totalPrice}`);
-            
+
             // 주문 상세 페이지로 이동
             navigate(`/order-details/${newOrder.id}`);
           }}

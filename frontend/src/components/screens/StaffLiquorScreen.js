@@ -6,7 +6,7 @@ import axios from 'axios';
 
 function StaffLiquorScreen() {
   const navigate = useNavigate();
-   // DB에서 가져온 주류 재고
+  // DB에서 가져온 주류 재고
   const [liquors, setLiquors] = useState([]);
 
   // Wine, Champagne만 관리
@@ -58,12 +58,12 @@ function StaffLiquorScreen() {
     }
   };
 
-  const handleOrderMore = (id) => {
+  const handleOrderMore = async (id) => {
     const target = liquors.find(l => l.id === id);
     if (!target) return;
 
     const input = window.prompt(`How many bottles of ${target.name} did you buy?`, "1");
-    
+
     // 취소 누르거나 빈 값일 경우 중단
     if (input === null || input.trim() === "") return;
 
@@ -74,23 +74,42 @@ function StaffLiquorScreen() {
       alert("Please enter a valid number.");
       return;
     }
-    
-    handleUpdateQuantity(target.id, Math.max(0, target.quantity + addAmount));
-    alert(`Successfully Ordered ${addAmount} bottles for ${target.name}`);
+
+
+    // handleUpdateQuantity(target.id, Math.max(0, target.quantity + addAmount));
+    // -> 이제 상대적인 증가량만 서버로 보냅니다.
+
+    try {
+      await axios.post(`http://localhost:8080/api/inventories/${target.id}/add`, {
+        amount: addAmount
+      });
+
+      // 성공하면 프론트엔드 상태도 "현재값 + 추가값"으로 갱신
+      setLiquors(prev =>
+        prev.map(liquor =>
+          liquor.id === id ? { ...liquor, quantity: liquor.quantity + addAmount } : liquor
+        )
+      );
+
+      alert(`Successfully Ordered ${addAmount} bottles for ${target.name}`);
+    } catch (error) {
+      console.error('주류 주문 실패:', error);
+      alert('주문 처리에 실패했습니다.');
+    }
   };
 
   // 통계 계산
-const champagneCount = liquors
-  .filter(l => l.name === 'Champagne')
-  .reduce((sum, item) => sum + item.quantity, 0);
+  const champagneCount = liquors
+    .filter(l => l.name === 'Champagne')
+    .reduce((sum, item) => sum + item.quantity, 0);
 
-const wineCount = liquors
-  .filter(l => l.name === 'Wine')
-  .reduce((sum, item) => sum + item.quantity, 0);
+  const wineCount = liquors
+    .filter(l => l.name === 'Wine')
+    .reduce((sum, item) => sum + item.quantity, 0);
 
-const totalValue = liquors.reduce((sum, item) => sum + (item.quantity * item.price), 0);
-// DB에 price 없음 → 일단 totalValue = 0
-// const totalValue = 0;
+  const totalValue = liquors.reduce((sum, item) => sum + (item.quantity * item.price), 0);
+  // DB에 price 없음 → 일단 totalValue = 0
+  // const totalValue = 0;
 
 
   /* 하드코팅 다 삭제
